@@ -1,0 +1,13 @@
+FROM node:22-alpine
+WORKDIR /app
+RUN npm install -g pnpm@12.10.1
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY prisma ./prisma
+COPY packages ./packages
+
+RUN pnpm install
+RUN pnpm --filter @ghosttrace/shared-types run build
+RUN pnpm --filter @ghosttrace/prisma run generate
+
+CMD ["sh", "-c", "pnpm --filter @ghosttrace/prisma exec prisma db push --schema=schema.prisma && pnpm --filter @ghosttrace/prisma exec tsx seed.ts"]

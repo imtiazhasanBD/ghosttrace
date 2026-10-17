@@ -1,0 +1,30 @@
+FROM node:22-alpine AS builder
+WORKDIR /app
+RUN npm install -g pnpm@12.10.1
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
+COPY prisma ./prisma
+COPY packages ./packages
+COPY apps/demo-api ./apps/demo-api
+
+RUN pnpm install
+RUN pnpm --filter @ghosttrace/shared-types run build
+RUN pnpm --filter @ghosttrace/prisma run generate
+RUN pnpm --filter @ghosttrace/prisma run build
+RUN pnpm --filter @ghosttrace/ui run build
+RUN pnpm --filter @ghosttrace/sdk-node run build
+RUN pnpm --filter @ghosttrace/instrumentation-nest run build
+RUN pnpm --filter @ghosttrace/instrumentation-prisma run build
+RUN pnpm --filter @ghosttrace/demo-api run build
+
+FROM node:22-alpine AS runner
+WORKDIR /app
+RUN npm install -g pnpm@12.10.1
+
+COPY --from=builder /app /app
+
+ENV NODE_ENV=production
+ENV PORT=3002
+EXPOSE 3002
+
+CMD ["pnpm", "--filter", "@ghosttrace/demo-api", "run", "start"]

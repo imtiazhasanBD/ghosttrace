@@ -1,0 +1,9 @@
+{
+  "extends": "@ghosttrace/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./",
+    "declaration": true
+  },
+  "include": ["index.ts", "seed.ts"]
+}

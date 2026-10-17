@@ -1,0 +1,23 @@
+{
+  "name": "@ghosttrace/instrumentation-prisma",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@ghosttrace/shared-types": "workspace:*",
+    "@opentelemetry/api": "^1.9.0",
+    "@opentelemetry/semantic-conventions": "^1.28.0"
+  },
+  "devDependencies": {
+    "@ghosttrace/config": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "@types/node": "^22.13.0",
+    "typescript": "^5.7.3"
+  }
+}

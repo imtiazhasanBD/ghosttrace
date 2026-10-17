@@ -1,0 +1,184 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String            @id @default(uuid())
+  email        String            @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  memberships  WorkspaceMember[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id        String            @id @default(uuid())
+  name      String
+  slug      String            @unique
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  members   WorkspaceMember[]
+  projects  Project[]
+
+  @@map("workspaces")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model WorkspaceMember {
+  id          String        @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        WorkspaceRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model Project {
+  id          String       @id @default(uuid())
+  workspaceId String
+  name        String
+  slug        String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  apiKeys     ApiKey[]
+  traces      Trace[]
+  spans       Span[]
+  errorGroups ErrorGroup[]
+
+  @@unique([workspaceId, slug])
+  @@map("projects")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  projectId  String
+  name       String
+  keyPrefix  String    // e.g. gt_live_abc123
+  keyHash    String    @unique // SHA-256 hash of plaintext key
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([keyHash])
+  @@index([projectId])
+  @@map("api_keys")
+}
+
+model Trace {
+  id                String   @id // OpenTelemetry traceId (32-character hex)
+  projectId         String
+  serviceName       String
+  rootSpanName      String
+  rootSpanKind      String   @default("SERVER")
+  startTimeUnixNano BigInt
+  endTimeUnixNano   BigInt
+  durationMs        Float
+  statusCode        String   @default("UNSET") // UNSET, OK, ERROR
+  errorCount        Int      @default(0)
+  spanCount         Int      @default(1)
+  createdAt         DateTime @default(now())
+
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spans             Span[]
+
+  @@index([projectId, startTimeUnixNano(sort: Desc)])
+  @@index([projectId, statusCode])
+  @@index([projectId, durationMs])
+  @@map("traces")
+}
+
+model Span {
+  id                String      @id // OpenTelemetry spanId (16-character hex)
+  traceId           String
+  projectId         String
+  parentSpanId      String?
+  name              String
+  kind              String      @default("INTERNAL") // INTERNAL, SERVER, CLIENT, PRODUCER, CONSUMER
+  startTimeUnixNano BigInt
+  endTimeUnixNano   BigInt
+  durationMs        Float
+  statusCode        String      @default("UNSET") // UNSET, OK, ERROR
+  statusMessage     String?
+  attributes        Json        @default("{}")
+  events            Json        @default("[]")
+  errorGroupHash    String?
+  createdAt         DateTime    @default(now())
+
+  trace             Trace       @relation(fields: [traceId], references: [id], onDelete: Cascade)
+  project           Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  errorGroup        ErrorGroup? @relation(fields: [errorGroupHash], references: [stackHash], onDelete: SetNull)
+
+  @@unique([projectId, traceId, id])
+  @@index([traceId, startTimeUnixNano(sort: Asc)])
+  @@index([projectId, errorGroupHash])
+  @@index([parentSpanId])
+  @@map("spans")
+}
+
+model ErrorGroup {
+  id               String   @id @default(uuid())
+  projectId        String
+  serviceName      String
+  errorType        String
+  message          String
+  stackHash        String   @unique
+  sampleStackTrace String?  @db.Text
+  firstSeenAt      DateTime @default(now())
+  lastSeenAt       DateTime @default(now())
+  count            Int      @default(1)
+  status           String   @default("UNRESOLVED") // UNRESOLVED, RESOLVED, IGNORED
+
+  project          Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  spans            Span[]
+
+  @@index([projectId, lastSeenAt(sort: Desc)])
+  @@map("error_groups")
+}
+
+// Demo Tables for Instrumented Flow
+model DemoProduct {
+  id          String   @id @default(uuid())
+  name        String
+  sku         String   @unique
+  price       Float
+  stock       Int
+  createdAt   DateTime @default(now())
+
+  @@map("demo_products")
+}
+
+model DemoOrder {
+  id            String   @id @default(uuid())
+  customerEmail String
+  productSku    String
+  quantity      Int
+  totalAmount   Float
+  status        String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  failureReason String?
+  createdAt     DateTime @default(now())
+
+  @@map("demo_orders")
+}

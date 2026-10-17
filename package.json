@@ -1,0 +1,25 @@
+{
+  "name": "ghosttrace-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GhostTrace — Backend Observability and Evidence-First Debugging Platform",
+  "packageManager": "pnpm@12.10.1",
+  "scripts": {
+    "build": "pnpm -r --filter=!ghosttrace-monorepo run build",
+    "dev": "pnpm -r --parallel run dev",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "db:generate": "pnpm --filter @ghosttrace/prisma run generate",
+    "db:migrate": "pnpm --filter @ghosttrace/prisma run migrate",
+    "db:seed": "pnpm --filter @ghosttrace/prisma run seed",
+    "docker:up": "docker compose -f infra/docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f infra/docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f infra/docker/docker-compose.yml logs -f"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3"
+  }
+}

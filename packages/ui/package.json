@@ -1,0 +1,17 @@
+{
+  "name": "@ghosttrace/ui",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@ghosttrace/config": "workspace:*",
+    "@types/node": "^22.13.0",
+    "typescript": "^5.7.3"
+  }
+}
