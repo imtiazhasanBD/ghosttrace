@@ -6,6 +6,7 @@ import { IngestionModule } from './ingestion/ingestion.module';
 import { TracesModule } from './traces/traces.module';
 import { ErrorGroupsModule } from './error-groups/error-groups.module';
 import { ProjectsModule } from './projects/projects.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { ProjectsModule } from './projects/projects.module';
     TracesModule,
     ErrorGroupsModule,
     ProjectsModule,
+    WorkspacesModule,
   ],
 })
 export class AppModule {}

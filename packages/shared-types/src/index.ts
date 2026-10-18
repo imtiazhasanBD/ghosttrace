@@ -126,6 +126,26 @@ export interface WorkspaceSummary {
   role: 'OWNER' | 'ADMIN' | 'MEMBER';
 }
 
+export interface WorkspaceMemberEntity {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  createdAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
+export interface WorkspaceDetail extends WorkspaceSummary {
+  membersCount: number;
+  projectsCount: number;
+  projects: ProjectSummary[];
+  createdAt: string;
+}
+
 export interface ProjectSummary {
   id: string;
   workspaceId: string;

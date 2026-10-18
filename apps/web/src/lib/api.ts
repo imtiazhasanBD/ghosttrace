@@ -6,12 +6,121 @@ import {
   ApiKeyMetadata,
   ApiKeyCreatedResponse,
   TraceComparisonResult,
+  WorkspaceDetail,
+  WorkspaceMemberEntity,
 } from '@ghosttrace/shared-types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
-export async function fetchProjects(): Promise<ProjectSummary[]> {
-  const res = await fetch(`${API_BASE}/api/v1/projects`, { cache: 'no-store' });
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('gt_auth_token');
+}
+
+export function getAuthHeaders(): HeadersInit {
+  const token = getAuthToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export async function fetchWorkspaces(): Promise<WorkspaceDetail[]> {
+  const res = await fetch(`${API_BASE}/api/v1/workspaces`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch workspaces');
+  return res.json();
+}
+
+export async function createWorkspace(name: string): Promise<WorkspaceDetail> {
+  const res = await fetch(`${API_BASE}/api/v1/workspaces`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to create workspace');
+  }
+  return res.json();
+}
+
+export async function fetchWorkspaceMembers(workspaceId: string): Promise<WorkspaceMemberEntity[]> {
+  const res = await fetch(`${API_BASE}/api/v1/workspaces/${workspaceId}/members`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch workspace members');
+  return res.json();
+}
+
+export async function inviteWorkspaceMember(
+  workspaceId: string,
+  email: string,
+  role: string = 'MEMBER',
+): Promise<WorkspaceMemberEntity> {
+  const res = await fetch(`${API_BASE}/api/v1/workspaces/${workspaceId}/members`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, role }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to invite team member');
+  }
+  return res.json();
+}
+
+export async function removeWorkspaceMember(
+  workspaceId: string,
+  memberId: string,
+): Promise<{ success: boolean }> {
+  const res = await fetch(`${API_BASE}/api/v1/workspaces/${workspaceId}/members/${memberId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to remove member');
+  }
+  return res.json();
+}
+
+export async function createWorkspaceProject(
+  workspaceId: string,
+  name: string,
+): Promise<ProjectSummary> {
+  const res = await fetch(`${API_BASE}/api/v1/workspaces/${workspaceId}/projects`, {
+    method: 'POST',
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to create project');
+  }
+  return res.json();
+}
+
+export async function fetchProjects(workspaceId?: string): Promise<ProjectSummary[]> {
+  const url = new URL(`${API_BASE}/api/v1/projects`);
+  if (workspaceId) url.searchParams.set('workspaceId', workspaceId);
+  const res = await fetch(url.toString(), {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch projects');
   return res.json();
 }
@@ -19,7 +128,10 @@ export async function fetchProjects(): Promise<ProjectSummary[]> {
 export async function fetchOverviewMetrics(projectId?: string): Promise<OverviewMetrics> {
   const url = new URL(`${API_BASE}/api/v1/traces/overview`);
   if (projectId) url.searchParams.set('projectId', projectId);
-  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const res = await fetch(url.toString(), {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch overview metrics');
   return res.json();
 }
@@ -42,22 +154,32 @@ export async function fetchTraces(params: {
   if (params.minDurationMs !== undefined) url.searchParams.set('minDurationMs', String(params.minDurationMs));
   if (params.maxDurationMs !== undefined) url.searchParams.set('maxDurationMs', String(params.maxDurationMs));
 
-  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const res = await fetch(url.toString(), {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch traces');
   return res.json();
 }
 
 export async function fetchTraceDetails(traceId: string): Promise<TraceEntity> {
-  const res = await fetch(`${API_BASE}/api/v1/traces/${traceId}`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/api/v1/traces/${traceId}`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch trace details');
   return res.json();
 }
 
-export async function fetchTraceComparison(baseId: string, targetId: string): Promise<TraceComparisonResult> {
+export async function fetchTraceComparison(baseId: string, targetId: string, projectId?: string): Promise<TraceComparisonResult> {
   const url = new URL(`${API_BASE}/api/v1/traces/compare`);
   url.searchParams.set('base', baseId);
   url.searchParams.set('target', targetId);
-  const res = await fetch(url.toString(), { cache: 'no-store' });
+  if (projectId) url.searchParams.set('projectId', projectId);
+  const res = await fetch(url.toString(), {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch trace comparison');
   return res.json();
 }
@@ -65,13 +187,19 @@ export async function fetchTraceComparison(baseId: string, targetId: string): Pr
 export async function fetchErrorGroups(projectId?: string): Promise<ErrorGroupEntity[]> {
   const url = new URL(`${API_BASE}/api/v1/error-groups`);
   if (projectId) url.searchParams.set('projectId', projectId);
-  const res = await fetch(url.toString(), { cache: 'no-store' });
+  const res = await fetch(url.toString(), {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch error groups');
   return res.json();
 }
 
 export async function fetchApiKeys(projectId: string): Promise<ApiKeyMetadata[]> {
-  const res = await fetch(`${API_BASE}/api/v1/projects/${projectId}/api-keys`, { cache: 'no-store' });
+  const res = await fetch(`${API_BASE}/api/v1/projects/${projectId}/api-keys`, {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
   if (!res.ok) throw new Error('Failed to fetch API keys');
   return res.json();
 }
@@ -79,18 +207,28 @@ export async function fetchApiKeys(projectId: string): Promise<ApiKeyMetadata[]>
 export async function createApiKey(projectId: string, name: string): Promise<ApiKeyCreatedResponse> {
   const res = await fetch(`${API_BASE}/api/v1/projects/${projectId}/api-keys`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      ...getAuthHeaders(),
+      'Content-Type': 'application/json',
+    },
     body: JSON.stringify({ name }),
   });
-  if (!res.ok) throw new Error('Failed to create API key');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to create API key');
+  }
   return res.json();
 }
 
 export async function revokeApiKey(keyId: string): Promise<void> {
   const res = await fetch(`${API_BASE}/api/v1/projects/api-keys/${keyId}`, {
     method: 'DELETE',
+    headers: getAuthHeaders(),
   });
-  if (!res.ok) throw new Error('Failed to revoke API key');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || 'Failed to revoke API key');
+  }
 }
 
 export interface AuthUser {
@@ -176,4 +314,3 @@ export function logoutUser(): void {
     localStorage.removeItem('gt_auth_user');
   }
 }
-

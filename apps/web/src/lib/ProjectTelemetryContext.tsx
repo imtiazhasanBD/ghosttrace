@@ -9,6 +9,7 @@ import {
   ErrorGroupEntity,
   ApiKeyMetadata,
   TraceComparisonResult,
+  WorkspaceDetail,
 } from '@ghosttrace/shared-types';
 import {
   fetchProjects,
@@ -17,12 +18,32 @@ import {
   fetchErrorGroups,
   fetchApiKeys,
   fetchTraceComparison,
+  fetchWorkspaces,
+  createWorkspace as apiCreateWorkspace,
+  createWorkspaceProject,
+  fetchCurrentUser,
+  getAuthToken,
+  AuthUser,
 } from './api';
 
 interface ProjectTelemetryContextType {
+  // Workspaces
+  workspaces: WorkspaceDetail[];
+  currentWorkspace: WorkspaceDetail | null;
+  setCurrentWorkspaceId: (workspaceId: string) => void;
+  createWorkspace: (name: string) => Promise<WorkspaceDetail>;
+  refreshWorkspaces: () => Promise<void>;
+  // Projects
   projects: ProjectSummary[];
   currentProjectId: string;
   setCurrentProjectId: (id: string) => void;
+  createProject: (name: string) => Promise<ProjectSummary>;
+  // Auth
+  currentUser: AuthUser | null;
+  setCurrentUser: (user: AuthUser | null) => void;
+  isAuthRequired: boolean;
+  setIsAuthRequired: (val: boolean) => void;
+  // Metrics & Data
   metrics: OverviewMetrics | null;
   traces: TraceEntity[];
   totalTraces: number;
@@ -62,6 +83,9 @@ export const ProjectTelemetryProvider: React.FC<{
   const router = useRouter();
   const pathname = usePathname();
 
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const [isAuthRequired, setIsAuthRequired] = useState<boolean>(false);
+  const [workspaces, setWorkspaces] = useState<WorkspaceDetail[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [metrics, setMetrics] = useState<OverviewMetrics | null>(null);
   const [traces, setTraces] = useState<TraceEntity[]>([]);
@@ -97,18 +121,55 @@ export const ProjectTelemetryProvider: React.FC<{
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
-  // 2. Fetch projects list
-  useEffect(() => {
-    fetchProjects()
-      .then((projs) => {
-        setProjects(projs);
-      })
-      .catch((err) => console.error('Failed to fetch projects:', err));
+  // 2. Fetch User & Workspaces
+  const loadUserAndWorkspaces = useCallback(async () => {
+    const token = getAuthToken();
+    if (!token) {
+      setIsAuthRequired(true);
+      setIsInitialLoading(false);
+      return;
+    }
+
+    try {
+      const userProfile = await fetchCurrentUser();
+      if (!userProfile) {
+        setIsAuthRequired(true);
+        setIsInitialLoading(false);
+        return;
+      }
+
+      setCurrentUser(userProfile.user);
+      setIsAuthRequired(false);
+
+      const wsList = await fetchWorkspaces();
+      setWorkspaces(wsList);
+
+      // Find all projects across user's workspaces
+      const allProjects = wsList.flatMap((w) => w.projects || []);
+      setProjects(allProjects);
+    } catch (err) {
+      console.error('Failed to load user session or workspaces:', err);
+      setIsAuthRequired(true);
+      setIsInitialLoading(false);
+    }
   }, []);
 
-  // 3. Core data loader
+  useEffect(() => {
+    loadUserAndWorkspaces();
+  }, [loadUserAndWorkspaces]);
+
+  // Derive current workspace from projectId
+  const currentWorkspace = workspaces.find((w) =>
+    w.projects?.some((p) => p.id === projectId)
+  ) || workspaces[0] || null;
+
+  // 3. Core telemetry data loader for active project
   const refreshData = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId || projectId === 'default' || isAuthRequired) {
+      setIsInitialLoading(false);
+      return;
+    }
+
     setIsRefreshing(true);
     try {
       const [m, t, eg, ak] = await Promise.all([
@@ -123,13 +184,16 @@ export const ProjectTelemetryProvider: React.FC<{
       setErrorGroups(eg);
       setApiKeys(ak);
       setLastRefreshedAt(new Date());
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to refresh telemetry:', err);
+      if (err.message && (err.message.includes('401') || err.message.includes('Unauthorized'))) {
+        setIsAuthRequired(true);
+      }
     } finally {
       setIsRefreshing(false);
       setIsInitialLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, isAuthRequired]);
 
   useEffect(() => {
     refreshData();
@@ -137,17 +201,48 @@ export const ProjectTelemetryProvider: React.FC<{
 
   // 4. Polling loop
   useEffect(() => {
-    if (!isAutoRefresh || !isTabVisible) return;
+    if (!isAutoRefresh || !isTabVisible || isAuthRequired) return;
     const interval = setInterval(() => {
       refreshData();
     }, refreshInterval);
     return () => clearInterval(interval);
-  }, [isAutoRefresh, isTabVisible, refreshInterval, refreshData]);
+  }, [isAutoRefresh, isTabVisible, refreshInterval, refreshData, isAuthRequired]);
 
-  // 5. Switching projects
+  // 5. Switching workspace
+  const handleSwitchWorkspace = (workspaceId: string) => {
+    const ws = workspaces.find((w) => w.id === workspaceId);
+    if (!ws) return;
+    if (ws.projects && ws.projects.length > 0) {
+      router.push(`/projects/${ws.projects[0].id}/overview`);
+    } else {
+      router.push(`/projects/new?workspaceId=${ws.id}`);
+    }
+  };
+
+  // 6. Creating a new workspace
+  const handleCreateWorkspace = async (name: string): Promise<WorkspaceDetail> => {
+    const newWs = await apiCreateWorkspace(name);
+    await loadUserAndWorkspaces();
+    if (newWs.projects && newWs.projects.length > 0) {
+      router.push(`/projects/${newWs.projects[0].id}/overview`);
+    }
+    return newWs;
+  };
+
+  // 7. Creating a new project in current workspace
+  const handleCreateProject = async (name: string): Promise<ProjectSummary> => {
+    if (!currentWorkspace) {
+      throw new Error('No active workspace selected');
+    }
+    const newProj = await createWorkspaceProject(currentWorkspace.id, name);
+    await loadUserAndWorkspaces();
+    router.push(`/projects/${newProj.id}/settings/sdk`);
+    return newProj;
+  };
+
+  // 8. Switching project
   const handleSwitchProject = (newProjectId: string) => {
     if (newProjectId === projectId) return;
-    // Replace projectId in the current path: /projects/[projectId]/section -> /projects/[newProjectId]/section
     const segments = pathname.split('/');
     if (segments[1] === 'projects' && segments[2]) {
       segments[2] = newProjectId;
@@ -157,7 +252,7 @@ export const ProjectTelemetryProvider: React.FC<{
     }
   };
 
-  // 6. Simulation actions
+  // 9. Simulation actions
   const handleSimulateSuccess = async () => {
     try {
       setIsSimulating(true);
@@ -201,12 +296,12 @@ export const ProjectTelemetryProvider: React.FC<{
     }
   };
 
-  // 7. Comparison action
+  // 10. Comparison action
   const handleRunComparison = async (baseId: string, targetId: string) => {
     if (!baseId || !targetId) return;
     setIsComparing(true);
     try {
-      const res = await fetchTraceComparison(baseId, targetId);
+      const res = await fetchTraceComparison(baseId, targetId, projectId);
       setComparisonResult(res);
     } catch (err) {
       alert('Failed to compute trace comparison: ' + err);
@@ -218,9 +313,19 @@ export const ProjectTelemetryProvider: React.FC<{
   return (
     <ProjectTelemetryContext.Provider
       value={{
+        workspaces,
+        currentWorkspace,
+        setCurrentWorkspaceId: handleSwitchWorkspace,
+        createWorkspace: handleCreateWorkspace,
+        refreshWorkspaces: loadUserAndWorkspaces,
         projects,
         currentProjectId: projectId,
         setCurrentProjectId: handleSwitchProject,
+        createProject: handleCreateProject,
+        currentUser,
+        setCurrentUser,
+        isAuthRequired,
+        setIsAuthRequired,
         metrics,
         traces,
         totalTraces,
