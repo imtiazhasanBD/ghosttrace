@@ -19,6 +19,7 @@ import {
   Film,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../lib/ProjectTelemetryContext';
+import { UserAccountMenu } from './UserAccountMenu';
 import { cn } from '../lib/utils';
 
 export const Sidebar: React.FC = () => {
@@ -252,6 +253,9 @@ export const Sidebar: React.FC = () => {
             />
           </div>
         )}
+
+        {/* User Account Entry */}
+        <UserAccountMenu variant="sidebar" collapsed={collapsed} />
 
         {/* Desktop collapse toggle */}
         {!isMobile && (

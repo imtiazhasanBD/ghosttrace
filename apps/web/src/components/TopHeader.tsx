@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useTheme } from 'next-themes';
 import {
   Menu,
   ChevronDown,
@@ -19,26 +18,18 @@ import {
   FolderGit2,
   Check,
   X,
-  LogOut,
-  User,
   Search,
   MoreHorizontal,
   Bell,
-  Sun,
-  Moon,
-  Laptop,
   Clock,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../lib/ProjectTelemetryContext';
-import { logoutUser } from '../lib/api';
-import { AuthModal } from './AuthModal';
 import { TraceSearchInput, TraceSearchDialog } from './ui/TraceSearchInput';
+import { UserAccountMenu } from './UserAccountMenu';
 import { cn } from '../lib/utils';
 
 export const TopHeader: React.FC = () => {
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
   const {
     workspaces,
@@ -49,8 +40,6 @@ export const TopHeader: React.FC = () => {
     currentProjectId,
     setCurrentProjectId,
     createProject,
-    currentUser,
-    setCurrentUser,
     isAutoRefresh,
     setIsAutoRefresh,
     refreshInterval,
@@ -69,11 +58,9 @@ export const TopHeader: React.FC = () => {
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [moreSubmenu, setMoreSubmenu] = useState<'main' | 'interval' | 'simulate' | 'appearance'>('main');
+  const [moreSubmenu, setMoreSubmenu] = useState<'main' | 'interval' | 'simulate'>('main');
   const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // New Workspace / Project dialog state
   const [showNewWorkspaceModal, setShowNewWorkspaceModal] = useState(false);
@@ -86,11 +73,6 @@ export const TopHeader: React.FC = () => {
   const projectRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const notificationsRef = useRef<HTMLDivElement>(null);
-  const userRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -109,9 +91,6 @@ export const TopHeader: React.FC = () => {
       if (notificationsRef.current && !notificationsRef.current.contains(target)) {
         setShowNotificationsMenu(false);
       }
-      if (userRef.current && !userRef.current.contains(target)) {
-        setShowUserMenu(false);
-      }
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -128,12 +107,6 @@ export const TopHeader: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
-
-  const handleLogout = () => {
-    logoutUser();
-    setCurrentUser(null);
-    router.push('/');
-  };
 
   const handleCreateNewWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -178,8 +151,6 @@ export const TopHeader: React.FC = () => {
     { label: '10s', value: 10000 },
     { label: '30s', value: 30000 },
   ];
-
-  const currentTheme = mounted ? theme || 'system' : 'system';
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border/80 bg-background/80 backdrop-blur-md">
@@ -412,7 +383,6 @@ export const TopHeader: React.FC = () => {
                 setShowWorkspaceMenu(false);
                 setShowProjectMenu(false);
                 setShowNotificationsMenu(false);
-                setShowUserMenu(false);
               }}
               className={cn(
                 'flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border px-2 sm:px-2.5 text-xs font-medium transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -483,29 +453,6 @@ export const TopHeader: React.FC = () => {
                         <span>Simulate traffic</span>
                       </div>
                       <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
-                    </button>
-
-                    <div className="h-px bg-border my-1" />
-
-                    {/* Appearance Row */}
-                    <button
-                      onClick={() => setMoreSubmenu('appearance')}
-                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-accent text-foreground transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-2">
-                        {currentTheme === 'dark' ? (
-                          <Moon className="h-3.5 w-3.5 text-cyan-400" />
-                        ) : currentTheme === 'light' ? (
-                          <Sun className="h-3.5 w-3.5 text-amber-500" />
-                        ) : (
-                          <Laptop className="h-3.5 w-3.5 text-primary" />
-                        )}
-                        <span>Appearance</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-[11px] capitalize text-muted-foreground">
-                        <span>{currentTheme}</span>
-                        <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
-                      </div>
                     </button>
                   </div>
                 )}
@@ -607,80 +554,6 @@ export const TopHeader: React.FC = () => {
                     </button>
                   </div>
                 )}
-
-                {/* 4. APPEARANCE SUBMENU */}
-                {moreSubmenu === 'appearance' && (
-                  <div className="space-y-0.5">
-                    <button
-                      onClick={() => setMoreSubmenu('main')}
-                      className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                      <span>Back</span>
-                    </button>
-                    <div className="h-px bg-border my-1" />
-                    <div className="px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
-                      Theme
-                    </div>
-                    <button
-                      onClick={() => {
-                        setTheme('light');
-                        setShowMoreMenu(false);
-                        setMoreSubmenu('main');
-                      }}
-                      className={cn(
-                        'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
-                        currentTheme === 'light'
-                          ? 'bg-accent text-accent-foreground font-semibold'
-                          : 'text-foreground hover:bg-muted'
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Sun className="h-3.5 w-3.5 text-amber-500" />
-                        <span>Light</span>
-                      </div>
-                      {currentTheme === 'light' && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTheme('dark');
-                        setShowMoreMenu(false);
-                        setMoreSubmenu('main');
-                      }}
-                      className={cn(
-                        'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
-                        currentTheme === 'dark'
-                          ? 'bg-accent text-accent-foreground font-semibold'
-                          : 'text-foreground hover:bg-muted'
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Moon className="h-3.5 w-3.5 text-cyan-400" />
-                        <span>Dark</span>
-                      </div>
-                      {currentTheme === 'dark' && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </button>
-                    <button
-                      onClick={() => {
-                        setTheme('system');
-                        setShowMoreMenu(false);
-                        setMoreSubmenu('main');
-                      }}
-                      className={cn(
-                        'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
-                        currentTheme === 'system'
-                          ? 'bg-accent text-accent-foreground font-semibold'
-                          : 'text-foreground hover:bg-muted'
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Laptop className="h-3.5 w-3.5 text-primary" />
-                        <span>System</span>
-                      </div>
-                      {currentTheme === 'system' && <Check className="h-3.5 w-3.5 text-primary" />}
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -693,7 +566,6 @@ export const TopHeader: React.FC = () => {
                 setShowMoreMenu(false);
                 setShowWorkspaceMenu(false);
                 setShowProjectMenu(false);
-                setShowUserMenu(false);
               }}
               className={cn(
                 'flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-md border text-muted-foreground hover:text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
@@ -723,63 +595,7 @@ export const TopHeader: React.FC = () => {
           </div>
 
           {/* User Profile / Menu */}
-          <div className="relative" ref={userRef}>
-            {currentUser ? (
-              <div>
-                <button
-                  onClick={() => {
-                    setShowUserMenu(!showUserMenu);
-                    setShowMoreMenu(false);
-                    setShowWorkspaceMenu(false);
-                    setShowProjectMenu(false);
-                  }}
-                  className="flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border border-border/70 bg-card/50 hover:bg-accent hover:border-border px-1.5 sm:px-2 text-xs text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  title="User profile"
-                  aria-expanded={showUserMenu}
-                >
-                  <div className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-primary/30 text-[11px] font-bold flex items-center justify-center shrink-0">
-                    {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
-                  </div>
-                  <span className="hidden md:inline font-medium max-w-[80px] truncate">
-                    {currentUser.name}
-                  </span>
-                  <ChevronDown
-                    className={cn(
-                      'h-3 w-3 text-muted-foreground transition-transform duration-150 hidden sm:inline',
-                      showUserMenu && 'rotate-180'
-                    )}
-                  />
-                </button>
-
-                {showUserMenu && (
-                  <div className="absolute right-0 mt-1.5 w-52 rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-2xl z-50 text-xs space-y-1 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-2.5 py-1.5 border-b border-border space-y-0.5">
-                      <div className="font-semibold text-foreground truncate">{currentUser.name}</div>
-                      <div className="text-[10px] text-muted-foreground truncate font-mono">
-                        {currentUser.email}
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full text-left px-2.5 py-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors font-medium flex items-center justify-between"
-                    >
-                      <span>Sign Out</span>
-                      <LogOut className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <button
-                onClick={() => setShowAuthModal(true)}
-                className="flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md bg-primary hover:bg-primary/90 px-2.5 sm:px-3 text-xs font-semibold text-primary-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-              >
-                <User className="h-3.5 w-3.5" />
-                <span className="hidden xs:inline">Sign In</span>
-              </button>
-            )}
-          </div>
+          <UserAccountMenu variant="header" />
 
         </div>
       </div>
@@ -872,16 +688,6 @@ export const TopHeader: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onAuthSuccess={(u) => {
-          setCurrentUser(u);
-          refreshData();
-        }}
-      />
     </header>
   );
 };
