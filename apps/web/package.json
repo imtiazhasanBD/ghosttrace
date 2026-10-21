@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ghosttrace/shared-types": "workspace:*",
+    "@tanstack/react-query": "^5.104.5",
     "clsx": "^2.1.1",
     "lucide-react": "^0.474.0",
     "next": "^14.2.23",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@ghosttrace/config": "workspace:*",
+    "@tanstack/react-query-devtools": "^5.104.5",
     "@types/node": "^22.13.0",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",

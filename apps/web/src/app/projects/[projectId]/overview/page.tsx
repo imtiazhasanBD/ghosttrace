@@ -34,6 +34,7 @@ import {
   Line,
 } from 'recharts';
 import { useProjectTelemetry } from '../../../../lib/ProjectTelemetryContext';
+import { useOverviewQuery, useTracesQuery } from '../../../../lib/hooks/useTelemetryQueries';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../../components/ui/Card';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
@@ -140,14 +141,41 @@ function MiniBarSparkline({
 export default function OverviewPage() {
   const router = useRouter();
   const {
-    metrics,
-    traces,
     currentProjectId,
-    isInitialLoading,
-    isRefreshing,
-    refreshData,
+    refreshInterval,
+    isAutoRefresh,
     errorGroups,
   } = useProjectTelemetry();
+
+  // Milestone A: TanStack Query for Overview Metrics
+  const {
+    data: metricsData,
+    isLoading: isOverviewLoading,
+    isRefetching: isOverviewRefetching,
+    refetch: refetchOverview,
+  } = useOverviewQuery(currentProjectId, {
+    refetchInterval: isAutoRefresh ? refreshInterval : false,
+  });
+
+  // Milestone A: TanStack Query for Recent Traces on Overview
+  const {
+    data: tracesData,
+    isLoading: isTracesLoading,
+    isRefetching: isTracesRefetching,
+    refetch: refetchTraces,
+  } = useTracesQuery(
+    { projectId: currentProjectId, limit: 50 },
+    { refetchInterval: isAutoRefresh ? refreshInterval : false }
+  );
+
+  const metrics = metricsData ?? null;
+  const traces = tracesData?.traces ?? [];
+  const isInitialLoading = isOverviewLoading || isTracesLoading;
+  const isRefreshing = isOverviewRefetching || isTracesRefetching;
+
+  const refreshData = async () => {
+    await Promise.all([refetchOverview(), refetchTraces()]);
+  };
 
   // Filters & Time range state
   const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d'>('1h');

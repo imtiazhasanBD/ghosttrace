@@ -127,26 +127,30 @@ export async function fetchProjects(workspaceId?: string): Promise<ProjectSummar
   return res.json();
 }
 
-export async function fetchOverviewMetrics(projectId?: string): Promise<OverviewMetrics> {
+export async function fetchOverviewMetrics(projectId?: string, signal?: AbortSignal): Promise<OverviewMetrics> {
   const url = new URL(`${API_BASE}/api/v1/traces/overview`);
   if (projectId) url.searchParams.set('projectId', projectId);
   const res = await fetch(url.toString(), {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch overview metrics');
   return res.json();
 }
 
-export async function fetchTraces(params: {
-  projectId?: string;
-  serviceName?: string;
-  statusCode?: string;
-  search?: string;
-  limit?: number;
-  minDurationMs?: number;
-  maxDurationMs?: number;
-}): Promise<{ traces: TraceEntity[]; total: number }> {
+export async function fetchTraces(
+  params: {
+    projectId?: string;
+    serviceName?: string;
+    statusCode?: string;
+    search?: string;
+    limit?: number;
+    minDurationMs?: number;
+    maxDurationMs?: number;
+  },
+  signal?: AbortSignal
+): Promise<{ traces: TraceEntity[]; total: number }> {
   const url = new URL(`${API_BASE}/api/v1/traces`);
   if (params.projectId) url.searchParams.set('projectId', params.projectId);
   if (params.serviceName && params.serviceName !== 'ALL') url.searchParams.set('serviceName', params.serviceName);
@@ -159,21 +163,25 @@ export async function fetchTraces(params: {
   const res = await fetch(url.toString(), {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch traces');
   return res.json();
 }
 
-export async function fetchSlowQueries(params: {
-  projectId?: string;
-  thresholdMs?: number;
-  serviceName?: string;
-  operation?: string;
-  model?: string;
-  sortBy?: 'duration_desc' | 'duration_asc' | 'recent';
-  limit?: number;
-  offset?: number;
-}): Promise<SlowQueriesResponse> {
+export async function fetchSlowQueries(
+  params: {
+    projectId?: string;
+    thresholdMs?: number;
+    serviceName?: string;
+    operation?: string;
+    model?: string;
+    sortBy?: 'duration_desc' | 'duration_asc' | 'recent';
+    limit?: number;
+    offset?: number;
+  },
+  signal?: AbortSignal
+): Promise<SlowQueriesResponse> {
   const url = new URL(`${API_BASE}/api/v1/traces/slow-queries`);
   if (params.projectId) url.searchParams.set('projectId', params.projectId);
   if (params.thresholdMs !== undefined) url.searchParams.set('thresholdMs', String(params.thresholdMs));
@@ -187,21 +195,28 @@ export async function fetchSlowQueries(params: {
   const res = await fetch(url.toString(), {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch slow queries');
   return res.json();
 }
 
-export async function fetchTraceDetails(traceId: string): Promise<TraceEntity> {
+export async function fetchTraceDetails(traceId: string, signal?: AbortSignal): Promise<TraceEntity> {
   const res = await fetch(`${API_BASE}/api/v1/traces/${traceId}`, {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch trace details');
   return res.json();
 }
 
-export async function fetchTraceComparison(baseId: string, targetId: string, projectId?: string): Promise<TraceComparisonResult> {
+export async function fetchTraceComparison(
+  baseId: string,
+  targetId: string,
+  projectId?: string,
+  signal?: AbortSignal
+): Promise<TraceComparisonResult> {
   const url = new URL(`${API_BASE}/api/v1/traces/compare`);
   url.searchParams.set('base', baseId);
   url.searchParams.set('target', targetId);
@@ -209,26 +224,29 @@ export async function fetchTraceComparison(baseId: string, targetId: string, pro
   const res = await fetch(url.toString(), {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch trace comparison');
   return res.json();
 }
 
-export async function fetchErrorGroups(projectId?: string): Promise<ErrorGroupEntity[]> {
+export async function fetchErrorGroups(projectId?: string, signal?: AbortSignal): Promise<ErrorGroupEntity[]> {
   const url = new URL(`${API_BASE}/api/v1/error-groups`);
   if (projectId) url.searchParams.set('projectId', projectId);
   const res = await fetch(url.toString(), {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch error groups');
   return res.json();
 }
 
-export async function fetchApiKeys(projectId: string): Promise<ApiKeyMetadata[]> {
+export async function fetchApiKeys(projectId: string, signal?: AbortSignal): Promise<ApiKeyMetadata[]> {
   const res = await fetch(`${API_BASE}/api/v1/projects/${projectId}/api-keys`, {
     headers: getAuthHeaders(),
     cache: 'no-store',
+    signal,
   });
   if (!res.ok) throw new Error('Failed to fetch API keys');
   return res.json();
