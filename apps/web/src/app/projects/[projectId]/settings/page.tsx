@@ -15,6 +15,10 @@ import {
   ShieldAlert,
   ArrowRight,
   Sparkles,
+  Activity,
+  CheckCircle2,
+  Server,
+  Database,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../../../../lib/ProjectTelemetryContext';
 import {
@@ -300,6 +304,67 @@ export default function ProjectSettingsPage() {
                 })}
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 4. Platform System Status & Ingestion Health */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Server className="h-4 w-4 text-emerald-500" />
+              Platform Status & Ingestion Health
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Operational status of OpenTelemetry ingestion collectors and query profilers.
+            </p>
+          </div>
+          <Badge variant="success" size="sm" className="font-mono gap-1 text-[11px]">
+            <CheckCircle2 className="h-3 w-3" />
+            Operational
+          </Badge>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-1">
+              <div className="flex items-center justify-between text-xs font-medium text-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Activity className="h-3.5 w-3.5 text-primary" />
+                  OTel Ingestion
+                </span>
+                <span className="text-[10px] font-mono text-emerald-500 font-semibold uppercase">Active</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                HTTP/Protobuf collectors listening on ports 3000 & 3001 with gzip decompression.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-1">
+              <div className="flex items-center justify-between text-xs font-medium text-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Database className="h-3.5 w-3.5 text-indigo-500" />
+                  Prisma Profiler
+                </span>
+                <span className="text-[10px] font-mono text-indigo-500 font-semibold uppercase">Attached</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                SQL execution tracing active with slow query analysis threshold &ge;100ms.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg border border-border bg-muted/30 space-y-1">
+              <div className="flex items-center justify-between text-xs font-medium text-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Server className="h-3.5 w-3.5 text-amber-500" />
+                  Demo API Service
+                </span>
+                <span className="text-[10px] font-mono text-emerald-500 font-semibold uppercase">Online</span>
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Demo microservice checkout simulation server running on port 3002.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -532,7 +532,7 @@ export default function OverviewPage() {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-md border border-border bg-popover/95 backdrop-blur-sm p-2.5 shadow-md text-xs space-y-1">
+                        <div className="rounded-md border border-border bg-popover text-popover-foreground p-2.5 shadow-md text-xs space-y-1">
                           <p className="font-semibold text-foreground font-mono">{payload[0].payload.time}</p>
                           <div className="flex items-center gap-1.5 text-sky-500 font-mono">
                             <span className="h-2 w-2 rounded-full bg-sky-500" />
@@ -600,7 +600,7 @@ export default function OverviewPage() {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-md border border-border bg-popover/95 backdrop-blur-sm p-2.5 shadow-md text-xs space-y-1.5">
+                        <div className="rounded-md border border-border bg-popover text-popover-foreground p-2.5 shadow-md text-xs space-y-1.5">
                           <p className="font-semibold text-foreground font-mono">{payload[0]?.payload?.time}</p>
                           <div className="space-y-1 font-mono text-[11px]">
                             <div className="flex items-center justify-between gap-4">

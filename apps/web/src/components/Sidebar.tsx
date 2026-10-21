@@ -16,6 +16,7 @@ import {
   Database,
   Radio,
   Cpu,
+  Film,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../lib/ProjectTelemetryContext';
 import { cn } from '../lib/utils';
@@ -81,6 +82,16 @@ export const Sidebar: React.FC = () => {
           label: 'Integrations',
           href: `/projects/${currentProjectId}/integrations`,
           icon: Cpu,
+        },
+      ],
+    },
+    {
+      title: 'MARKETING & ADS',
+      items: [
+        {
+          label: 'Ad Promo Studio',
+          href: '/promo',
+          icon: Film,
         },
       ],
     },

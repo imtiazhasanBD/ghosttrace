@@ -2,9 +2,13 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { useTheme } from 'next-themes';
 import {
   Menu,
   ChevronDown,
+  ChevronRight,
+  ChevronLeft,
   RefreshCw,
   Sparkles,
   PlayCircle,
@@ -17,17 +21,25 @@ import {
   X,
   LogOut,
   User,
+  Search,
+  MoreHorizontal,
   Bell,
+  Sun,
+  Moon,
+  Laptop,
+  Clock,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../lib/ProjectTelemetryContext';
 import { logoutUser } from '../lib/api';
 import { AuthModal } from './AuthModal';
-import { ThemeToggle } from './theme/ThemeToggle';
-import { TraceSearchInput } from './ui/TraceSearchInput';
+import { TraceSearchInput, TraceSearchDialog } from './ui/TraceSearchInput';
 import { cn } from '../lib/utils';
 
 export const TopHeader: React.FC = () => {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
   const {
     workspaces,
     currentWorkspace,
@@ -56,9 +68,11 @@ export const TopHeader: React.FC = () => {
   // Dropdown states
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
-  const [showDemoMenu, setShowDemoMenu] = useState(false);
-  const [showIntervalMenu, setShowIntervalMenu] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [moreSubmenu, setMoreSubmenu] = useState<'main' | 'interval' | 'simulate' | 'appearance'>('main');
+  const [showNotificationsMenu, setShowNotificationsMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // New Workspace / Project dialog state
@@ -70,9 +84,13 @@ export const TopHeader: React.FC = () => {
 
   const workspaceRef = useRef<HTMLDivElement>(null);
   const projectRef = useRef<HTMLDivElement>(null);
-  const demoRef = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
   const userRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -84,11 +102,12 @@ export const TopHeader: React.FC = () => {
       if (projectRef.current && !projectRef.current.contains(target)) {
         setShowProjectMenu(false);
       }
-      if (demoRef.current && !demoRef.current.contains(target)) {
-        setShowDemoMenu(false);
+      if (moreRef.current && !moreRef.current.contains(target)) {
+        setShowMoreMenu(false);
+        setMoreSubmenu('main');
       }
-      if (intervalRef.current && !intervalRef.current.contains(target)) {
-        setShowIntervalMenu(false);
+      if (notificationsRef.current && !notificationsRef.current.contains(target)) {
+        setShowNotificationsMenu(false);
       }
       if (userRef.current && !userRef.current.contains(target)) {
         setShowUserMenu(false);
@@ -96,6 +115,18 @@ export const TopHeader: React.FC = () => {
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Global Cmd+K / Ctrl+K keyboard shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setShowSearchModal((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleLogout = () => {
@@ -142,87 +173,101 @@ export const TopHeader: React.FC = () => {
   const secondsAgo = Math.max(0, Math.round((Date.now() - lastRefreshedAt.getTime()) / 1000));
 
   const intervals = [
-    { label: '3s (Realtime)', value: 3000 },
+    { label: '3s', value: 3000 },
     { label: '5s', value: 5000 },
     { label: '10s', value: 10000 },
     { label: '30s', value: 30000 },
   ];
 
+  const currentTheme = mounted ? theme || 'system' : 'system';
+
   return (
-    <header className="sticky top-0 z-20 w-full border-b border-border bg-card/80 backdrop-blur-md">
-      <div className="flex h-14 items-center justify-between px-3 sm:px-6 gap-2">
-        {/* Left: Mobile hamburger & Workspace Switcher & Project Switcher */}
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          {/* Mobile hamburger button */}
+    <header className="sticky top-0 z-30 w-full border-b border-border/80 bg-background/80 backdrop-blur-md">
+      <div className="flex h-14 sm:h-15 items-center justify-between px-2.5 sm:px-6 gap-2 max-w-full">
+        
+        {/* ======================================================== */}
+        {/* LEFT: Mobile Toggle, Workspace & Project Switchers      */}
+        {/* ======================================================== */}
+        <div className="flex items-center gap-1 sm:gap-2 min-w-0 shrink">
+          {/* Mobile hamburger navigation toggle */}
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
-            className="md:hidden rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+            className="md:hidden flex items-center justify-center h-8.5 w-8.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
             aria-label="Open navigation sidebar"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </button>
 
-          {/* 1. Workspace Switcher */}
-          <div className="relative" ref={workspaceRef}>
+          {/* Workspace Selector */}
+          <div className="relative shrink min-w-0" ref={workspaceRef}>
             <button
               onClick={() => {
                 setShowWorkspaceMenu(!showWorkspaceMenu);
                 setShowProjectMenu(false);
+                setShowMoreMenu(false);
               }}
-              className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 hover:bg-accent px-2.5 py-1.5 text-xs text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title="Switch Workspace"
+              className="flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border border-border/70 bg-card/50 hover:bg-accent hover:border-border px-2 sm:px-2.5 text-xs text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink min-w-0"
+              title={`Switch Workspace: ${currentWorkspace?.name || 'Workspace'}`}
               aria-expanded={showWorkspaceMenu}
             >
               <Briefcase className="h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="font-semibold max-w-[100px] sm:max-w-[130px] truncate text-foreground">
+              <span className="font-semibold max-w-[65px] xs:max-w-[85px] sm:max-w-[125px] truncate text-foreground">
                 {currentWorkspace?.name || 'Workspace'}
               </span>
               {currentWorkspace?.role && (
-                <span className="hidden sm:inline-block rounded bg-primary/10 px-1 py-0.2 text-[9px] font-bold font-mono text-primary border border-primary/20 uppercase tracking-wider">
+                <span className="hidden md:inline-block rounded bg-primary/10 px-1 py-0.2 text-[9px] font-bold font-mono text-primary border border-primary/20 uppercase tracking-wider">
                   {currentWorkspace.role}
                 </span>
               )}
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              <ChevronDown
+                className={cn(
+                  'h-3 w-3 text-muted-foreground transition-transform duration-150 shrink-0',
+                  showWorkspaceMenu && 'rotate-180'
+                )}
+              />
             </button>
 
+            {/* Workspace Dropdown */}
             {showWorkspaceMenu && (
-              <div className="absolute left-0 mt-1.5 w-60 rounded-lg border border-border bg-popover p-1.5 shadow-xl z-50 text-xs space-y-0.5 animate-in fade-in">
-                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              <div className="absolute left-0 mt-1.5 w-64 rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-2xl z-50 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                   Workspaces
                 </div>
-                {workspaces.map((w) => (
-                  <button
-                    key={w.id}
-                    onClick={() => {
-                      setCurrentWorkspaceId(w.id);
-                      setShowWorkspaceMenu(false);
-                    }}
-                    className={cn(
-                      'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
-                      currentWorkspace?.id === w.id
-                        ? 'bg-accent text-accent-foreground font-semibold'
-                        : 'text-foreground hover:bg-muted'
-                    )}
-                  >
-                    <div className="truncate pr-2">
-                      <div className="truncate">{w.name}</div>
-                      <div className="text-[10px] text-muted-foreground font-normal">
-                        {w.role} &bull; {w.projects?.length || 0} projects
+                <div className="max-h-60 overflow-y-auto space-y-0.5">
+                  {workspaces.map((w) => (
+                    <button
+                      key={w.id}
+                      onClick={() => {
+                        setCurrentWorkspaceId(w.id);
+                        setShowWorkspaceMenu(false);
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition-colors',
+                        currentWorkspace?.id === w.id
+                          ? 'bg-accent text-accent-foreground font-semibold'
+                          : 'text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <div className="truncate pr-2">
+                        <div className="truncate text-xs">{w.name}</div>
+                        <div className="text-[10px] text-muted-foreground font-normal">
+                          {w.role} &bull; {w.projects?.length || 0} projects
+                        </div>
                       </div>
-                    </div>
-                    {currentWorkspace?.id === w.id && (
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                    )}
-                  </button>
-                ))}
+                      {currentWorkspace?.id === w.id && (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
 
-                <div className="border-t border-border my-1 pt-1">
+                <div className="border-t border-border/80 my-1 pt-1">
                   <button
                     onClick={() => {
                       setShowWorkspaceMenu(false);
                       setShowNewWorkspaceModal(true);
                     }}
-                    className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors font-medium"
+                    className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors font-medium text-xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Create Workspace</span>
@@ -232,59 +277,69 @@ export const TopHeader: React.FC = () => {
             )}
           </div>
 
-          <span className="text-muted-foreground/40 hidden sm:inline">/</span>
+          {/* Low-contrast separator */}
+          <span className="text-muted-foreground/30 text-xs font-mono select-none shrink-0">/</span>
 
-          {/* 2. Project Switcher */}
-          <div className="relative" ref={projectRef}>
+          {/* Project Selector */}
+          <div className="relative shrink min-w-0" ref={projectRef}>
             <button
               onClick={() => {
                 setShowProjectMenu(!showProjectMenu);
                 setShowWorkspaceMenu(false);
+                setShowMoreMenu(false);
               }}
-              className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 hover:bg-accent px-2.5 py-1.5 text-xs text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title="Select Project"
+              className="flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border border-border/70 bg-card/50 hover:bg-accent hover:border-border px-2 sm:px-2.5 text-xs text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink min-w-0"
+              title={`Switch Project: ${currentProject?.name || 'Project'}`}
               aria-expanded={showProjectMenu}
             >
-              <FolderGit2 className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-              <span className="font-semibold max-w-[90px] sm:max-w-[120px] truncate text-foreground">
+              <FolderGit2 className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 shrink-0" />
+              <span className="font-semibold max-w-[65px] xs:max-w-[85px] sm:max-w-[125px] truncate text-foreground">
                 {currentProject?.name || 'Project'}
               </span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              <ChevronDown
+                className={cn(
+                  'h-3 w-3 text-muted-foreground transition-transform duration-150 shrink-0',
+                  showProjectMenu && 'rotate-180'
+                )}
+              />
             </button>
 
+            {/* Project Dropdown */}
             {showProjectMenu && (
-              <div className="absolute left-0 mt-1.5 w-60 rounded-lg border border-border bg-popover p-1.5 shadow-xl z-50 text-xs space-y-0.5 animate-in fade-in">
-                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+              <div className="absolute left-0 mt-1.5 w-64 rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-2xl z-50 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2.5 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                   Projects in {currentWorkspace?.name || 'Workspace'}
                 </div>
-                {activeWorkspaceProjects.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setCurrentProjectId(p.id);
-                      setShowProjectMenu(false);
-                    }}
-                    className={cn(
-                      'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
-                      currentProjectId === p.id
-                        ? 'bg-accent text-accent-foreground font-semibold'
-                        : 'text-foreground hover:bg-muted'
-                    )}
-                  >
-                    <span className="truncate pr-2">{p.name}</span>
-                    {currentProjectId === p.id && (
-                      <Check className="h-3.5 w-3.5 text-primary shrink-0" />
-                    )}
-                  </button>
-                ))}
+                <div className="max-h-60 overflow-y-auto space-y-0.5">
+                  {activeWorkspaceProjects.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => {
+                        setCurrentProjectId(p.id);
+                        setShowProjectMenu(false);
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2.5 py-2 rounded-md text-left transition-colors',
+                        currentProjectId === p.id
+                          ? 'bg-accent text-accent-foreground font-semibold'
+                          : 'text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <span className="truncate pr-2 text-xs">{p.name}</span>
+                      {currentProjectId === p.id && (
+                        <Check className="h-3.5 w-3.5 text-primary shrink-0" />
+                      )}
+                    </button>
+                  ))}
+                </div>
 
-                <div className="border-t border-border my-1 pt-1">
+                <div className="border-t border-border/80 my-1 pt-1">
                   <button
                     onClick={() => {
                       setShowProjectMenu(false);
                       setShowNewProjectModal(true);
                     }}
-                    className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors font-medium"
+                    className="w-full flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-primary hover:bg-primary/10 transition-colors font-medium text-xs"
                   >
                     <Plus className="h-3.5 w-3.5" />
                     <span>Create Project</span>
@@ -295,186 +350,412 @@ export const TopHeader: React.FC = () => {
           </div>
         </div>
 
-        {/* Center/Search: Quick Trace & Metric Search Lookup */}
-        <div className="hidden md:flex flex-1 max-w-xs mx-2">
-          <TraceSearchInput projectId={currentProjectId} />
+        {/* ======================================================== */}
+        {/* CENTER: Compact Search Input (Desktop >= md)             */}
+        {/* ======================================================== */}
+        <div className="hidden md:flex flex-1 justify-center max-w-xs lg:max-w-sm mx-2">
+          <TraceSearchInput
+            projectId={currentProjectId}
+            onTriggerDialog={() => setShowSearchModal(true)}
+          />
         </div>
 
-        {/* Right: Freshness, Compare, Simulation, Polling, Theme Toggle & User */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Freshness indicator */}
-          <div className="hidden xl:flex items-center gap-1.5 text-[11px] text-muted-foreground font-mono">
+        {/* ======================================================== */}
+        {/* RIGHT: Actions, Sync Status, More Dropdown & Profile    */}
+        {/* ======================================================== */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          
+          {/* Mobile search trigger icon (< md) */}
+          <button
+            onClick={() => setShowSearchModal(true)}
+            className="md:hidden flex items-center justify-center h-8.5 w-8.5 rounded-md border border-border/70 bg-card/50 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shadow-2xs"
+            title="Search traces, endpoints and errors (⌘K)"
+            aria-label="Open search dialog"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+
+          {/* Compact Sync Status (Desktop >= lg) */}
+          <div
+            className="hidden lg:flex items-center gap-1.5 px-2.5 h-9 rounded-md border border-border/50 bg-card/40 text-[11px] text-muted-foreground font-mono select-none"
+            title={isAutoRefresh ? `Live telemetry synced ${secondsAgo}s ago` : 'Telemetry polling is currently paused'}
+          >
             <span
               className={cn(
-                'h-1.5 w-1.5 rounded-full',
-                isAutoRefresh ? 'bg-primary animate-pulse' : 'bg-muted-foreground/60'
+                'h-2 w-2 rounded-full shrink-0',
+                isAutoRefresh ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/60'
               )}
             />
-            <span>{isAutoRefresh ? `Synced ${secondsAgo}s ago` : 'Polling paused'}</span>
+            <span className="hidden xl:inline">{isAutoRefresh ? `Synced ${secondsAgo}s ago` : 'Paused'}</span>
+            <span className="xl:hidden">{isAutoRefresh ? 'Live' : 'Off'}</span>
           </div>
 
-          <div className="h-4 w-px bg-border hidden xl:block" />
-
-          {/* Differential Compare Button */}
+          {/* Compare Action (Visible header action) */}
           <button
             onClick={() => setShowCompareModal(true)}
-            className="hidden sm:flex items-center gap-1.5 rounded-md border border-border bg-card/60 hover:bg-accent px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            title="Open Success vs Failure Differential Trace Comparison"
+            className="hidden sm:flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border border-border/70 bg-card/50 hover:bg-accent hover:border-border px-2 sm:px-2.5 text-xs font-medium text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            title="Open Differential Trace Comparison"
           >
-            <GitCompare className="h-3.5 w-3.5 text-indigo-500" />
-            <span className="hidden lg:inline">Compare</span>
+            <GitCompare className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
+            <span className="hidden md:inline">Compare</span>
           </button>
 
-          {/* Simulate Traffic Dropdown */}
-          <div className="relative" ref={demoRef}>
+          {/* ======================================================== */}
+          {/* MORE ACTIONS DROPDOWN (Primary Hub for Secondary Tools) */}
+          {/* ======================================================== */}
+          <div className="relative" ref={moreRef}>
             <button
-              onClick={() => setShowDemoMenu(!showDemoMenu)}
-              className="flex items-center gap-1.5 rounded-md border border-border bg-card/60 hover:bg-accent px-2 py-1.5 text-xs font-medium text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title="Simulate live traffic and exceptions"
-              aria-expanded={showDemoMenu}
+              onClick={() => {
+                const next = !showMoreMenu;
+                setShowMoreMenu(next);
+                if (!next) setMoreSubmenu('main');
+                setShowWorkspaceMenu(false);
+                setShowProjectMenu(false);
+                setShowNotificationsMenu(false);
+                setShowUserMenu(false);
+              }}
+              className={cn(
+                'flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border px-2 sm:px-2.5 text-xs font-medium transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                showMoreMenu
+                  ? 'bg-accent text-accent-foreground border-border'
+                  : 'border-border/70 bg-card/50 hover:bg-accent hover:border-border text-foreground'
+              )}
+              title="More actions, monitoring and tools"
+              aria-label="More actions"
+              aria-expanded={showMoreMenu}
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-              <span className="hidden sm:inline">Simulate</span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="hidden sm:inline">More</span>
+              <ChevronDown
+                className={cn(
+                  'h-3 w-3 text-muted-foreground transition-transform duration-150 hidden sm:inline',
+                  showMoreMenu && 'rotate-180'
+                )}
+              />
             </button>
 
-            {showDemoMenu && (
-              <div className="absolute right-0 mt-1.5 w-64 rounded-lg border border-border bg-popover p-2 shadow-xl z-50 space-y-1.5 animate-in fade-in">
-                <div className="px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Demo API Telemetry Triggers
-                </div>
-                <button
-                  onClick={() => {
-                    handleSimulateSuccess();
-                    setShowDemoMenu(false);
-                  }}
-                  disabled={isSimulating}
-                  className="w-full flex items-center gap-2 rounded-md bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2.5 py-2 text-xs font-medium text-emerald-600 dark:text-emerald-400 transition-colors text-left disabled:opacity-50"
-                >
-                  <PlayCircle className="h-4 w-4 shrink-0" />
-                  <div>
-                    <div className="font-semibold">Simulate Successful Checkout</div>
-                    <div className="text-[10px] opacity-80 font-mono">HTTP 200 &bull; Multi-span trace</div>
+            {/* MORE DROPDOWN MENU */}
+            {showMoreMenu && (
+              <div className="absolute right-0 mt-1.5 w-60 rounded-lg border border-border bg-popover text-popover-foreground p-1 shadow-2xl z-50 text-xs animate-in fade-in zoom-in-95 duration-100">
+                {/* 1. MAIN MENU VIEW */}
+                {moreSubmenu === 'main' && (
+                  <div className="space-y-0.5">
+                    {/* Refresh Telemetry */}
+                    <button
+                      onClick={() => {
+                        refreshData();
+                        setShowMoreMenu(false);
+                      }}
+                      disabled={isRefreshing}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-accent text-foreground transition-colors text-left disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <RefreshCw
+                          className={cn('h-3.5 w-3.5 text-muted-foreground', isRefreshing && 'animate-spin text-primary')}
+                        />
+                        <span>Refresh telemetry</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-muted-foreground">{secondsAgo}s ago</span>
+                    </button>
+
+                    {/* Polling Interval Row */}
+                    <button
+                      onClick={() => setMoreSubmenu('interval')}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-accent text-foreground transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>Polling interval</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] font-mono text-muted-foreground">
+                        <span>{isAutoRefresh ? `${refreshInterval / 1000}s` : 'Off'}</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
+                      </div>
+                    </button>
+
+                    {/* Simulate Traffic Row */}
+                    <button
+                      onClick={() => setMoreSubmenu('simulate')}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-accent text-foreground transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className={cn('h-3.5 w-3.5 text-amber-500', isSimulating && 'animate-spin')} />
+                        <span>Simulate traffic</span>
+                      </div>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
+                    </button>
+
+                    <div className="h-px bg-border my-1" />
+
+                    {/* Appearance Row */}
+                    <button
+                      onClick={() => setMoreSubmenu('appearance')}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md hover:bg-accent text-foreground transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        {currentTheme === 'dark' ? (
+                          <Moon className="h-3.5 w-3.5 text-cyan-400" />
+                        ) : currentTheme === 'light' ? (
+                          <Sun className="h-3.5 w-3.5 text-amber-500" />
+                        ) : (
+                          <Laptop className="h-3.5 w-3.5 text-primary" />
+                        )}
+                        <span>Appearance</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[11px] capitalize text-muted-foreground">
+                        <span>{currentTheme}</span>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
+                      </div>
+                    </button>
                   </div>
-                </button>
-                <button
-                  onClick={() => {
-                    handleSimulateFailure();
-                    setShowDemoMenu(false);
-                  }}
-                  disabled={isSimulating}
-                  className="w-full flex items-center gap-2 rounded-md bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 px-2.5 py-2 text-xs font-medium text-rose-600 dark:text-rose-400 transition-colors text-left disabled:opacity-50"
-                >
-                  <XCircle className="h-4 w-4 shrink-0" />
-                  <div>
-                    <div className="font-semibold">Simulate Out of Stock Error</div>
-                    <div className="text-[10px] opacity-80 font-mono">HTTP 409 &bull; Error group stack</div>
+                )}
+
+                {/* 2. POLLING INTERVAL SUBMENU */}
+                {moreSubmenu === 'interval' && (
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => setMoreSubmenu('main')}
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      <span>Back</span>
+                    </button>
+                    <div className="h-px bg-border my-1" />
+                    <div className="px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                      Polling Frequency
+                    </div>
+                    {intervals.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => {
+                          setIsAutoRefresh(true);
+                          setRefreshInterval(opt.value);
+                          setShowMoreMenu(false);
+                          setMoreSubmenu('main');
+                        }}
+                        className={cn(
+                          'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
+                          isAutoRefresh && refreshInterval === opt.value
+                            ? 'bg-accent text-accent-foreground font-semibold'
+                            : 'text-foreground hover:bg-muted'
+                        )}
+                      >
+                        <span>{opt.label} seconds</span>
+                        {isAutoRefresh && refreshInterval === opt.value && (
+                          <Check className="h-3.5 w-3.5 text-primary" />
+                        )}
+                      </button>
+                    ))}
+                    <div className="h-px bg-border my-1" />
+                    <button
+                      onClick={() => {
+                        setIsAutoRefresh(!isAutoRefresh);
+                        setShowMoreMenu(false);
+                        setMoreSubmenu('main');
+                      }}
+                      className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-amber-600 dark:text-amber-400 hover:bg-muted font-medium transition-colors"
+                    >
+                      <span>{isAutoRefresh ? 'Pause Polling' : 'Resume Polling'}</span>
+                      {!isAutoRefresh && <Check className="h-3.5 w-3.5 text-amber-500" />}
+                    </button>
                   </div>
-                </button>
+                )}
+
+                {/* 3. SIMULATE TRAFFIC SUBMENU */}
+                {moreSubmenu === 'simulate' && (
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => setMoreSubmenu('main')}
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      <span>Back</span>
+                    </button>
+                    <div className="h-px bg-border my-1" />
+                    <div className="px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                      Simulate Traffic
+                    </div>
+                    <button
+                      onClick={() => {
+                        handleSimulateSuccess();
+                        setShowMoreMenu(false);
+                        setMoreSubmenu('main');
+                      }}
+                      disabled={isSimulating}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 transition-colors text-left disabled:opacity-50"
+                    >
+                      <PlayCircle className="h-4 w-4 shrink-0" />
+                      <div>
+                        <div className="font-semibold text-xs">Simulate Success</div>
+                        <div className="text-[10px] opacity-75 font-mono">HTTP 200 &bull; Checkout</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleSimulateFailure();
+                        setShowMoreMenu(false);
+                        setMoreSubmenu('main');
+                      }}
+                      disabled={isSimulating}
+                      className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors text-left disabled:opacity-50"
+                    >
+                      <XCircle className="h-4 w-4 shrink-0" />
+                      <div>
+                        <div className="font-semibold text-xs">Simulate Error</div>
+                        <div className="text-[10px] opacity-75 font-mono">HTTP 409 &bull; Out of stock</div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+
+                {/* 4. APPEARANCE SUBMENU */}
+                {moreSubmenu === 'appearance' && (
+                  <div className="space-y-0.5">
+                    <button
+                      onClick={() => setMoreSubmenu('main')}
+                      className="w-full flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:bg-accent rounded-md transition-colors"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      <span>Back</span>
+                    </button>
+                    <div className="h-px bg-border my-1" />
+                    <div className="px-2 py-0.5 text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">
+                      Theme
+                    </div>
+                    <button
+                      onClick={() => {
+                        setTheme('light');
+                        setShowMoreMenu(false);
+                        setMoreSubmenu('main');
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
+                        currentTheme === 'light'
+                          ? 'bg-accent text-accent-foreground font-semibold'
+                          : 'text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sun className="h-3.5 w-3.5 text-amber-500" />
+                        <span>Light</span>
+                      </div>
+                      {currentTheme === 'light' && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTheme('dark');
+                        setShowMoreMenu(false);
+                        setMoreSubmenu('main');
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
+                        currentTheme === 'dark'
+                          ? 'bg-accent text-accent-foreground font-semibold'
+                          : 'text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Moon className="h-3.5 w-3.5 text-cyan-400" />
+                        <span>Dark</span>
+                      </div>
+                      {currentTheme === 'dark' && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTheme('system');
+                        setShowMoreMenu(false);
+                        setMoreSubmenu('main');
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between px-2.5 py-1.5 rounded-md text-left transition-colors',
+                        currentTheme === 'system'
+                          ? 'bg-accent text-accent-foreground font-semibold'
+                          : 'text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Laptop className="h-3.5 w-3.5 text-primary" />
+                        <span>System</span>
+                      </div>
+                      {currentTheme === 'system' && <Check className="h-3.5 w-3.5 text-primary" />}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          {/* Polling Interval Trigger */}
-          <div className="relative" ref={intervalRef}>
+          {/* Notifications Button */}
+          <div className="relative" ref={notificationsRef}>
             <button
-              onClick={() => setShowIntervalMenu(!showIntervalMenu)}
-              className="flex items-center gap-1 rounded-md border border-border bg-card/60 hover:bg-accent px-2 py-1.5 text-xs text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              title="Telemetry polling interval"
-              aria-expanded={showIntervalMenu}
+              onClick={() => {
+                setShowNotificationsMenu(!showNotificationsMenu);
+                setShowMoreMenu(false);
+                setShowWorkspaceMenu(false);
+                setShowProjectMenu(false);
+                setShowUserMenu(false);
+              }}
+              className={cn(
+                'flex items-center justify-center h-8.5 w-8.5 sm:h-9 sm:w-9 rounded-md border text-muted-foreground hover:text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                showNotificationsMenu
+                  ? 'bg-accent text-accent-foreground border-border'
+                  : 'border-border/70 bg-card/50 hover:bg-accent hover:border-border'
+              )}
+              title="Notifications"
+              aria-label="View notifications"
+              aria-expanded={showNotificationsMenu}
             >
-              <span className="font-mono text-[11px] font-semibold text-primary">
-                {isAutoRefresh ? `${refreshInterval / 1000}s` : 'Off'}
-              </span>
-              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+              <Bell className="h-3.5 w-3.5" />
             </button>
 
-            {showIntervalMenu && (
-              <div className="absolute right-0 mt-1.5 w-44 rounded-lg border border-border bg-popover p-1.5 shadow-xl z-50 text-xs space-y-0.5 animate-in fade-in">
-                <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Polling Frequency
+            {showNotificationsMenu && (
+              <div className="absolute right-0 mt-1.5 w-64 rounded-lg border border-border bg-popover text-popover-foreground p-3 shadow-2xl z-50 text-xs space-y-2 animate-in fade-in zoom-in-95 duration-100">
+                <div className="flex items-center justify-between border-b border-border pb-1.5">
+                  <span className="font-semibold text-foreground text-xs">Notifications</span>
                 </div>
-                {intervals.map((opt) => (
-                  <button
-                    key={opt.value}
-                    onClick={() => {
-                      setIsAutoRefresh(true);
-                      setRefreshInterval(opt.value);
-                      setShowIntervalMenu(false);
-                    }}
-                    className={cn(
-                      'w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors',
-                      isAutoRefresh && refreshInterval === opt.value
-                        ? 'bg-accent text-accent-foreground font-semibold'
-                        : 'text-foreground hover:bg-muted'
-                    )}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-                <div className="h-px bg-border my-1" />
-                <button
-                  onClick={() => {
-                    setIsAutoRefresh(!isAutoRefresh);
-                    setShowIntervalMenu(false);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 rounded-md text-amber-600 dark:text-amber-400 hover:bg-muted transition-colors font-medium"
-                >
-                  {isAutoRefresh ? 'Pause Polling' : 'Resume Polling'}
-                </button>
+                <div className="py-4 text-center text-xs text-muted-foreground space-y-1">
+                  <Bell className="h-5 w-5 mx-auto text-muted-foreground/40" />
+                  <p className="font-medium text-foreground text-xs">No new notifications</p>
+                  <p className="text-[11px] text-muted-foreground">Alerts and trace threshold notifications will appear here.</p>
+                </div>
               </div>
             )}
           </div>
-
-          {/* Manual Refresh Button */}
-          <button
-            onClick={() => refreshData()}
-            disabled={isRefreshing}
-            className="rounded-md border border-border bg-card/60 hover:bg-accent p-2 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            title="Manual refresh"
-            aria-label="Refresh telemetry data"
-          >
-            <RefreshCw
-              className={cn('h-3.5 w-3.5', isRefreshing && 'animate-spin text-primary')}
-            />
-          </button>
-
-          {/* Light / Dark / System Theme Toggle */}
-          <ThemeToggle />
-
-          {/* Notification Bell */}
-          <button
-            className="rounded-md border border-border bg-card/60 hover:bg-accent p-2 text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            title="Notifications"
-            aria-label="View notifications"
-          >
-            <Bell className="h-3.5 w-3.5" />
-          </button>
 
           {/* User Profile / Menu */}
           <div className="relative" ref={userRef}>
             {currentUser ? (
               <div>
                 <button
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="flex items-center gap-2 rounded-md border border-border bg-card/60 hover:bg-accent px-2 py-1 text-xs text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => {
+                    setShowUserMenu(!showUserMenu);
+                    setShowMoreMenu(false);
+                    setShowWorkspaceMenu(false);
+                    setShowProjectMenu(false);
+                  }}
+                  className="flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md border border-border/70 bg-card/50 hover:bg-accent hover:border-border px-1.5 sm:px-2 text-xs text-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   title="User profile"
                   aria-expanded={showUserMenu}
                 >
-                  <div className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-primary/30 text-[11px] font-bold flex items-center justify-center">
+                  <div className="h-6 w-6 rounded-full bg-primary/20 text-primary border border-primary/30 text-[11px] font-bold flex items-center justify-center shrink-0">
                     {currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U'}
                   </div>
-                  <span className="hidden sm:inline font-semibold max-w-[100px] truncate">
+                  <span className="hidden md:inline font-medium max-w-[80px] truncate">
                     {currentUser.name}
                   </span>
-                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  <ChevronDown
+                    className={cn(
+                      'h-3 w-3 text-muted-foreground transition-transform duration-150 hidden sm:inline',
+                      showUserMenu && 'rotate-180'
+                    )}
+                  />
                 </button>
 
                 {showUserMenu && (
-                  <div className="absolute right-0 mt-1.5 w-52 rounded-lg border border-border bg-popover p-1.5 shadow-xl z-50 text-xs space-y-1 animate-in fade-in">
+                  <div className="absolute right-0 mt-1.5 w-52 rounded-lg border border-border bg-popover text-popover-foreground p-1.5 shadow-2xl z-50 text-xs space-y-1 animate-in fade-in zoom-in-95 duration-100">
                     <div className="px-2.5 py-1.5 border-b border-border space-y-0.5">
                       <div className="font-semibold text-foreground truncate">{currentUser.name}</div>
-                      <div className="text-[11px] text-muted-foreground truncate font-mono">
+                      <div className="text-[10px] text-muted-foreground truncate font-mono">
                         {currentUser.email}
                       </div>
                     </div>
@@ -492,15 +773,23 @@ export const TopHeader: React.FC = () => {
             ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className="flex items-center gap-1.5 rounded-md bg-primary hover:bg-primary/90 px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex items-center gap-1.5 h-8.5 sm:h-9 rounded-md bg-primary hover:bg-primary/90 px-2.5 sm:px-3 text-xs font-semibold text-primary-foreground transition-colors shadow-2xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
               >
                 <User className="h-3.5 w-3.5" />
-                <span>Sign In</span>
+                <span className="hidden xs:inline">Sign In</span>
               </button>
             )}
           </div>
+
         </div>
       </div>
+
+      {/* Global Trace Search Dialog (Triggered by Cmd+K or search icon) */}
+      <TraceSearchDialog
+        isOpen={showSearchModal}
+        onClose={() => setShowSearchModal(false)}
+        projectId={currentProjectId}
+      />
 
       {/* Modal: Create New Workspace */}
       {showNewWorkspaceModal && (
