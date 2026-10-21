@@ -16,6 +16,8 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
+import { Badge } from './ui/Badge';
+import { cn } from '../lib/utils';
 
 interface TraceWaterfallProps {
   trace: TraceEntity;
@@ -98,13 +100,16 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
     const traverse = (span: SpanEntity, depth: number) => {
       const children = childMap.get(span.id) || [];
       const hasChildren = children.length > 0;
+      const isCollapsed = collapsedSpanIds.has(span.id);
+
       flattened.push({
         ...span,
         depth,
         hasChildren,
+        isExpanded: !isCollapsed,
       });
 
-      if (hasChildren && !collapsedSpanIds.has(span.id)) {
+      if (hasChildren && !isCollapsed) {
         for (const child of children) {
           traverse(child, depth + 1);
         }
@@ -115,10 +120,10 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       traverse(root, 0);
     }
 
-    // Fallback: If some spans weren't traversed because of disjoint parent pointers, append them
-    const traversedIds = new Set(flattened.map((f) => f.id));
+    // Include any stranded spans not reached in tree
+    const visitedIds = new Set(flattened.map((s) => s.id));
     for (const s of rawSpans) {
-      if (!traversedIds.has(s.id)) {
+      if (!visitedIds.has(s.id)) {
         flattened.push({
           ...s,
           depth: 0,
@@ -156,9 +161,9 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       return {
         label: 'HTTP',
         icon: Globe,
-        barColor: isError ? 'bg-rose-500' : 'bg-cyan-500',
-        textColor: 'text-cyan-400',
-        badgeBg: 'bg-cyan-950/50 border-cyan-800/60',
+        barColor: isError ? 'bg-rose-500' : 'bg-sky-500',
+        textColor: 'text-sky-600 dark:text-sky-400',
+        badgeBg: 'bg-sky-500/15 border-sky-500/30 text-sky-600 dark:text-sky-400',
       };
     }
     if (span.kind === 'CLIENT' || nameLower.includes('prisma') || nameLower.includes('db') || span.attributes?.['db.system']) {
@@ -166,8 +171,8 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         label: 'DATABASE',
         icon: Database,
         barColor: isError ? 'bg-rose-500' : 'bg-amber-500',
-        textColor: 'text-amber-400',
-        badgeBg: 'bg-amber-950/50 border-amber-800/60',
+        textColor: 'text-amber-600 dark:text-amber-400',
+        badgeBg: 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400',
       };
     }
     if (span.kind === 'PRODUCER' || span.kind === 'CONSUMER' || nameLower.includes('queue') || nameLower.includes('job')) {
@@ -175,87 +180,86 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         label: 'QUEUE',
         icon: Inbox,
         barColor: isError ? 'bg-rose-500' : 'bg-emerald-500',
-        textColor: 'text-emerald-400',
-        badgeBg: 'bg-emerald-950/50 border-emerald-800/60',
+        textColor: 'text-emerald-600 dark:text-emerald-400',
+        badgeBg: 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
       };
     }
     return {
       label: 'INTERNAL',
       icon: Cpu,
       barColor: isError ? 'bg-rose-500' : 'bg-indigo-500',
-      textColor: 'text-indigo-400',
-      badgeBg: 'bg-indigo-950/50 border-indigo-800/60',
+      textColor: 'text-indigo-600 dark:text-indigo-400',
+      badgeBg: 'bg-indigo-500/15 border-indigo-500/30 text-indigo-600 dark:text-indigo-400',
     };
   };
 
   if (rawSpans.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-8 text-center space-y-2">
-        <p className="text-sm font-semibold text-slate-300">No Spans Recorded for this Trace</p>
-        <p className="text-xs text-slate-500">
-          The trace metadata exists, but span payloads may still be buffering in the collector.
+      <div className="rounded-lg border border-border bg-card p-8 text-center space-y-2">
+        <p className="text-sm font-semibold text-foreground">No Spans Recorded for this Trace</p>
+        <p className="text-xs text-muted-foreground">
+          The trace root was captured, but individual execution spans have not arrived yet.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/40 backdrop-blur-sm overflow-hidden flex flex-col shadow-xl">
+    <div className="rounded-lg border border-border bg-card overflow-hidden flex flex-col shadow-sm">
       {/* 1. Trace Header Summary Banner */}
-      <div className="border-b border-slate-800 bg-slate-900/80 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div className="border-b border-border bg-muted/30 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <span className="font-mono text-xs font-semibold text-slate-400">Trace:</span>
-            <span className="font-mono text-xs font-bold text-slate-100 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 select-all">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-xs font-semibold text-muted-foreground">Trace:</span>
+            <span className="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border select-all">
               {trace.id}
             </span>
             <button
               onClick={handleCopyTraceId}
-              className="text-slate-400 hover:text-slate-200 transition-colors"
+              className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               title="Copy Trace ID"
+              aria-label="Copy Trace ID"
             >
-              {copiedTraceId ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+              {copiedTraceId ? (
+                <Check className="h-3.5 w-3.5 text-emerald-500" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
             </button>
 
-            <span
-              className={`rounded px-2 py-0.5 text-[10px] font-bold border ${
-                trace.statusCode === 'ERROR'
-                  ? 'border-rose-800 bg-rose-950/80 text-rose-400'
-                  : 'border-emerald-800 bg-emerald-950/80 text-emerald-400'
-              }`}
-            >
+            <Badge variant={trace.statusCode === 'ERROR' ? 'destructive' : 'success'} size="sm">
               {trace.statusCode}
-            </span>
+            </Badge>
           </div>
 
-          <p className="text-sm font-semibold text-white flex items-center gap-2">
-            <span className="text-cyan-400 font-mono">{trace.serviceName}</span>
-            <span className="text-slate-600">&bull;</span>
-            <span>{trace.rootSpanName}</span>
+          <p className="text-xs font-semibold text-foreground flex items-center gap-2">
+            <span className="text-primary font-mono">{trace.serviceName}</span>
+            <span className="text-muted-foreground/40">&bull;</span>
+            <span className="font-mono">{trace.rootSpanName}</span>
           </p>
         </div>
 
         <div className="flex items-center gap-4 text-xs font-medium">
-          <div className="flex items-center gap-1.5 text-slate-300">
-            <Clock className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-1.5 text-foreground">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             <span>
-              Total Latency: <strong className="text-white font-mono">{trace.durationMs.toFixed(2)} ms</strong>
+              Total Latency: <strong className="font-mono">{trace.durationMs.toFixed(2)} ms</strong>
             </span>
           </div>
 
-          <div className="h-4 w-px bg-slate-800" />
+          <div className="h-3 w-px bg-border" />
 
-          <div className="flex items-center gap-1 text-slate-300">
-            <Layers className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-1.5 text-foreground">
+            <Layers className="h-3.5 w-3.5 text-muted-foreground" />
             <span>
-              Spans: <strong className="text-cyan-400 font-mono">{rawSpans.length}</strong>
+              Spans: <strong className="text-primary font-mono">{rawSpans.length}</strong>
             </span>
           </div>
 
           {trace.errorCount > 0 && (
             <>
-              <div className="h-4 w-px bg-slate-800" />
-              <div className="flex items-center gap-1 text-rose-400">
+              <div className="h-3 w-px bg-border" />
+              <div className="flex items-center gap-1.5 text-destructive">
                 <AlertCircle className="h-3.5 w-3.5" />
                 <span>
                   Exceptions: <strong className="font-mono">{trace.errorCount}</strong>
@@ -267,12 +271,12 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       </div>
 
       {/* 2. Shared Time Ruler */}
-      <div className="border-b border-slate-800/80 bg-slate-950/70 px-4 sm:px-6 py-2 grid grid-cols-12 text-[10px] uppercase font-mono font-semibold text-slate-400">
+      <div className="border-b border-border bg-muted/20 px-4 sm:px-6 py-2 grid grid-cols-12 text-[10px] uppercase font-mono font-semibold text-muted-foreground">
         <div className="col-span-12 sm:col-span-5 flex items-center justify-between pr-6">
           <span>Hierarchy & Operation</span>
-          <span className="text-slate-500 font-normal">Duration</span>
+          <span className="font-normal">Duration</span>
         </div>
-        <div className="hidden sm:grid col-span-7 grid-cols-4 text-right pr-2 text-slate-500">
+        <div className="hidden sm:grid col-span-7 grid-cols-4 text-right pr-2">
           <span className="text-left pl-3">0ms</span>
           <span>{(trace.durationMs * 0.33).toFixed(1)}ms</span>
           <span>{(trace.durationMs * 0.66).toFixed(1)}ms</span>
@@ -281,13 +285,13 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
       </div>
 
       {/* 3. Spans List with Guides & Duration Bars */}
-      <div className="divide-y divide-slate-800/40 relative font-sans">
+      <div className="divide-y divide-border/50 relative font-sans">
         {/* Background Vertical Grid Lines aligned with Ruler */}
         <div className="absolute inset-y-0 right-0 w-7/12 hidden sm:grid grid-cols-4 pointer-events-none z-0 pr-2">
-          <div className="border-l border-slate-800/30 h-full" />
-          <div className="border-l border-slate-800/30 h-full" />
-          <div className="border-l border-slate-800/30 h-full" />
-          <div className="border-r border-slate-800/30 h-full" />
+          <div className="border-l border-border/30 h-full" />
+          <div className="border-l border-border/30 h-full" />
+          <div className="border-l border-border/30 h-full" />
+          <div className="border-r border-border/30 h-full" />
         </div>
 
         {flattenedSpans.map((span) => {
@@ -323,11 +327,12 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                 });
               }}
               onMouseLeave={() => setHoveredSpan(null)}
-              className={`grid grid-cols-12 items-center px-4 sm:px-6 py-2 cursor-pointer text-xs transition-colors relative z-10 ${
+              className={cn(
+                'grid grid-cols-12 items-center px-4 sm:px-6 py-2 cursor-pointer text-xs transition-colors relative z-10',
                 isSelected
-                  ? 'bg-cyan-950/40 border-l-2 border-cyan-400'
-                  : 'hover:bg-slate-800/30'
-              }`}
+                  ? 'bg-primary/10 border-l-2 border-primary font-medium'
+                  : 'hover:bg-muted/40'
+              )}
             >
               {/* Span Tree Node Column */}
               <div
@@ -338,7 +343,7 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                 {span.hasChildren ? (
                   <button
                     onClick={(e) => toggleCollapse(span.id, e)}
-                    className="p-0.5 text-slate-500 hover:text-white rounded shrink-0 transition-colors"
+                    className="p-0.5 text-muted-foreground hover:text-foreground rounded shrink-0 transition-colors"
                   >
                     {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   </button>
@@ -347,59 +352,52 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                 )}
 
                 {/* Span type indicator badge */}
-                <span className={`p-1 rounded shrink-0 border ${meta.badgeBg}`}>
-                  <Icon className={`h-3 w-3 ${meta.textColor}`} />
+                <span className={cn('p-1 rounded shrink-0 border', meta.badgeBg)}>
+                  <Icon className="h-3 w-3" />
                 </span>
 
-                {/* Name */}
+                {/* Status indicator icon if error */}
+                {isError && (
+                  <AlertCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                )}
+
+                {/* Span Name */}
                 <span
-                  className={`truncate font-medium ${isSelected ? 'text-white font-semibold' : 'text-slate-200'}`}
+                  className={cn(
+                    'font-mono text-xs truncate',
+                    isSelected ? 'text-primary font-bold' : 'text-foreground font-semibold',
+                    isError && 'text-rose-600 dark:text-rose-400'
+                  )}
                   title={span.name}
                 >
                   {span.name}
                 </span>
 
-                {/* Error dot */}
-                {isError && (
-                  <span title={span.statusMessage || 'Span failed'}>
-                    <AlertCircle className="h-3.5 w-3.5 text-rose-400 shrink-0" />
-                  </span>
-                )}
-
-                {/* Slow DB Query Alert Tag */}
-                {meta.label === 'DATABASE' && span.durationMs >= 50 && (
-                  <span
-                    className="rounded bg-amber-950/80 px-1.5 py-0.2 text-[9px] font-mono font-bold text-amber-300 border border-amber-800/80 shrink-0"
-                    title={`Slow database query: ${span.durationMs.toFixed(1)}ms`}
-                  >
-                    Slow Query
-                  </span>
-                )}
-
-                {/* Duration */}
-                <span className="ml-auto text-[11px] font-mono text-slate-400 shrink-0 pl-1">
-                  {span.durationMs.toFixed(1)}ms
+                {/* Duration Label */}
+                <span className="ml-auto font-mono text-[11px] text-muted-foreground shrink-0 pl-2">
+                  {span.durationMs.toFixed(1)} ms
                 </span>
               </div>
 
-              {/* Waterfall Duration Bar Column */}
-              <div className="hidden sm:flex col-span-7 relative h-7 items-center pr-2">
-                <div className="w-full h-2 bg-slate-800/40 rounded-full relative overflow-visible">
-                  <div
-                    style={{
-                      left: `${leftPercent}%`,
-                      width: `${widthPercent}%`,
-                    }}
-                    className={`absolute top-1/2 -translate-y-1/2 h-3.5 rounded transition-all flex items-center px-1.5 shadow-sm group ${
-                      isError
-                        ? 'bg-rose-500 shadow-rose-500/20'
-                        : meta.barColor
-                    } ${isSelected ? 'ring-2 ring-white/80' : ''}`}
-                  >
-                    <span className="text-[9px] font-mono text-slate-950 font-bold whitespace-nowrap overflow-hidden text-ellipsis select-none">
-                      {widthPercent > 6 ? `${span.durationMs.toFixed(1)}ms` : ''}
+              {/* Waterfall Timeline Bar Column */}
+              <div className="col-span-12 sm:col-span-7 h-5 flex items-center relative pl-3 pr-2">
+                <div
+                  className={cn(
+                    'h-3 rounded relative transition-all duration-150',
+                    meta.barColor,
+                    isSelected ? 'ring-2 ring-primary ring-offset-1' : 'opacity-90 hover:opacity-100'
+                  )}
+                  style={{
+                    marginLeft: `${leftPercent}%`,
+                    width: `${widthPercent}%`,
+                  }}
+                >
+                  {/* Inline percent if bar wide enough */}
+                  {widthPercent > 12 && (
+                    <span className="absolute inset-0 flex items-center justify-center text-[9px] font-mono font-bold text-white px-1 truncate">
+                      {span.durationMs.toFixed(0)}ms
                     </span>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -407,30 +405,28 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
         })}
       </div>
 
-      {/* Floating Hover Tooltip */}
+      {/* 4. Hover Tooltip Overlay */}
       {hoveredSpan && (
         <div
-          className="fixed z-50 rounded-lg border border-slate-700 bg-slate-900/95 backdrop-blur-md p-2.5 shadow-2xl pointer-events-none text-xs space-y-1 max-w-xs animate-in fade-in"
+          className="fixed z-50 rounded-lg border border-border bg-popover text-popover-foreground p-3 shadow-xl pointer-events-none text-xs space-y-1 font-mono max-w-sm animate-in fade-in"
           style={{
-            left: `${Math.min(hoveredSpan.x + 10, window.innerWidth - 280)}px`,
-            top: `${Math.min(hoveredSpan.y, window.innerHeight - 150)}px`,
+            top: `${hoveredSpan.y}px`,
+            left: `${Math.min(hoveredSpan.x - 120, window.innerWidth - 300)}px`,
           }}
         >
-          <div className="flex items-center justify-between gap-2">
-            <span className="font-bold text-white truncate">{hoveredSpan.span.name}</span>
-            <span
-              className={`text-[10px] font-mono px-1 py-0.2 rounded font-bold ${
-                hoveredSpan.span.statusCode === 'ERROR' ? 'bg-rose-950 text-rose-400' : 'bg-emerald-950 text-emerald-400'
-              }`}
-            >
-              {hoveredSpan.span.statusCode}
-            </span>
+          <div className="font-bold text-foreground truncate">{hoveredSpan.span.name}</div>
+          <div className="flex items-center gap-3 text-muted-foreground text-[11px]">
+            <span>Offset: +{hoveredSpan.offsetMs.toFixed(1)}ms</span>
+            <span>Duration: {hoveredSpan.span.durationMs.toFixed(2)}ms</span>
           </div>
-          <div className="text-[11px] text-slate-400 font-mono space-y-0.5">
-            <div>Duration: <strong className="text-white">{hoveredSpan.span.durationMs.toFixed(2)} ms</strong> ({hoveredSpan.percentOfTrace.toFixed(1)}% of trace)</div>
-            <div>Start Offset: <strong className="text-cyan-400">+{hoveredSpan.offsetMs.toFixed(2)} ms</strong></div>
-            <div>Span Kind: <strong className="text-slate-300">{hoveredSpan.span.kind}</strong></div>
+          <div className="text-[10px] text-muted-foreground">
+            {hoveredSpan.percentOfTrace.toFixed(1)}% of total trace execution
           </div>
+          {hoveredSpan.span.statusCode === 'ERROR' && (
+            <div className="text-rose-600 dark:text-rose-400 text-[10px] font-bold">
+              Exception: {hoveredSpan.span.statusMessage || 'Span marked with ERROR status'}
+            </div>
+          )}
         </div>
       )}
     </div>

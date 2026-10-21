@@ -16,6 +16,8 @@ import {
   Database,
   Globe,
 } from 'lucide-react';
+import { Badge } from './ui/Badge';
+import { cn } from '../lib/utils';
 
 interface SpanDetailDrawerProps {
   span: SpanEntity | null;
@@ -62,18 +64,19 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
   );
 
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-xl border-l border-slate-800 bg-slate-950/95 backdrop-blur-xl shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-xl border-l border-border bg-card/95 backdrop-blur-xl shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-900/60">
-        <div className="flex items-center gap-3 overflow-hidden">
+      <div className="flex items-center justify-between border-b border-border px-5 py-3.5 bg-muted/30">
+        <div className="flex items-center gap-2.5 overflow-hidden">
           <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+            className={cn(
+              'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border',
               isError
-                ? 'border-rose-500/30 bg-rose-950/40 text-rose-400'
+                ? 'border-destructive/30 bg-destructive/10 text-destructive'
                 : isDb
-                ? 'border-cyan-500/30 bg-cyan-950/40 text-cyan-400'
-                : 'border-indigo-500/30 bg-indigo-950/40 text-indigo-400'
-            }`}
+                ? 'border-amber-500/30 bg-amber-500/10 text-amber-500'
+                : 'border-primary/30 bg-primary/10 text-primary'
+            )}
           >
             {isError ? (
               <AlertOctagon className="h-4 w-4" />
@@ -84,15 +87,15 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
             )}
           </div>
           <div className="overflow-hidden">
-            <h3 className="text-sm font-bold text-white truncate" title={span.name}>
+            <h3 className="text-xs font-bold text-foreground truncate font-mono" title={span.name}>
               {span.name}
             </h3>
-            <p className="text-[11px] font-mono text-slate-400 flex items-center gap-2 mt-0.5">
-              <span>Kind: <strong className="text-cyan-400">{span.kind}</strong></span>
+            <p className="text-[11px] font-mono text-muted-foreground flex items-center gap-2 mt-0.5">
+              <span>Kind: <strong className="text-foreground">{span.kind}</strong></span>
               <span>&bull;</span>
               <span>
                 Status:{' '}
-                <strong className={isError ? 'text-rose-400' : 'text-emerald-400'}>
+                <strong className={isError ? 'text-destructive font-bold' : 'text-emerald-600 dark:text-emerald-400 font-bold'}>
                   {span.statusCode}
                 </strong>
               </span>
@@ -102,203 +105,166 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
 
         <button
           onClick={onClose}
-          className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          aria-label="Close drawer"
+          className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Close span drawer"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
-        {/* Timing and Identifier Cards */}
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 space-y-1">
-            <span className="text-slate-400 text-[11px] flex items-center gap-1 font-medium">
-              <Clock className="h-3 w-3 text-slate-500" /> Duration
-            </span>
-            <p className="font-mono text-base font-bold text-white">
-              {span.durationMs.toFixed(2)} <span className="text-xs font-normal text-slate-400">ms</span>
-            </p>
+      {/* Content scroll area */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs font-mono">
+        {/* Timing and IDs strip */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="rounded-md border border-border bg-muted/20 p-2.5">
+            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Duration</span>
+            <p className="text-sm font-bold text-foreground mt-0.5">{span.durationMs.toFixed(3)} ms</p>
           </div>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 space-y-1">
-            <span className="text-slate-400 text-[11px] flex items-center gap-1 font-medium">
-              <Layers className="h-3 w-3 text-slate-500" /> Span ID
-            </span>
-            <div className="flex items-center justify-between font-mono text-xs text-slate-300">
-              <span className="truncate">{span.id}</span>
+          <div className="rounded-md border border-border bg-muted/20 p-2.5">
+            <span className="text-[10px] text-muted-foreground uppercase font-semibold">Span ID</span>
+            <div className="flex items-center justify-between mt-0.5">
+              <span className="text-xs text-foreground font-bold">{span.id.slice(0, 12)}...</span>
               <button
                 onClick={() => copyToClipboard(span.id, 'spanId')}
-                className="text-slate-400 hover:text-white ml-1 shrink-0"
+                className="text-muted-foreground hover:text-foreground p-1"
                 title="Copy Span ID"
               >
-                {copiedKey === 'spanId' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                {copiedKey === 'spanId' ? (
+                  <Check className="h-3 w-3 text-emerald-500" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
               </button>
             </div>
           </div>
         </div>
 
-        {/* Database Query Forensics Card */}
+        {/* Database Query Special Callout */}
         {isDb && dbInfo && (
-          <div
-            className={`rounded-xl border p-4 space-y-3 ${
-              isSlowDb
-                ? 'border-amber-800/60 bg-amber-950/20'
-                : 'border-slate-800 bg-slate-900/40'
-            }`}
-          >
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Database className="h-4 w-4 text-cyan-400" />
-                <span className="text-xs font-semibold text-white">Database Query Forensics</span>
-                {isSlowDb && (
-                  <span className="rounded bg-amber-950/80 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-800">
-                    Slow Query (≥50ms)
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 font-sans">
+                <Database className="h-3.5 w-3.5" />
+                Database Operation
+              </span>
+              {isSlowDb && (
+                <Badge variant="warning" size="sm">
+                  SLOW QUERY
+                </Badge>
+              )}
+            </div>
+
+            <div className="text-[11px] text-muted-foreground space-y-1">
+              <div>
+                System: <strong className="text-foreground">{dbInfo.dbSystem || 'SQL'}</strong>
+                {dbInfo.model && (
+                  <span>
+                    {' '}&bull; Model: <strong className="text-foreground">{dbInfo.model}</strong>
+                  </span>
+                )}
+                {dbInfo.operation && (
+                  <span>
+                    {' '}&bull; Operation: <strong className="text-foreground">{dbInfo.operation}</strong>
                   </span>
                 )}
               </div>
-
-              <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">
-                {dbInfo.isRawSql ? 'Raw SQL' : 'Prisma ORM'}
-              </span>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              {dbInfo.operation && (
-                <span className="rounded bg-cyan-950/70 px-2 py-0.5 text-[11px] font-mono text-cyan-300 border border-cyan-800/60">
-                  op: {dbInfo.operation}
-                </span>
-              )}
-              {dbInfo.model && (
-                <span className="rounded bg-indigo-950/70 px-2 py-0.5 text-[11px] font-mono text-indigo-300 border border-indigo-800/60">
-                  model: {dbInfo.model}
-                </span>
-              )}
-              <span className="rounded bg-slate-950 px-2 py-0.5 text-[11px] font-mono text-slate-400 border border-slate-800">
-                system: {dbInfo.dbSystem}
-              </span>
-            </div>
-
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-[11px] text-slate-400">
-                <span className="font-semibold text-slate-300">
-                  {dbInfo.isRawSql ? 'Formatted SQL Statement (Redacted)' : 'Prisma ORM Method'}
-                </span>
-                {(dbInfo.formattedStatement || dbInfo.statement) && (
+            {dbInfo.statement && (
+              <div className="mt-2 relative">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground pb-1">
+                  <span>SQL Statement</span>
                   <button
-                    onClick={() => copyToClipboard(dbInfo.formattedStatement || dbInfo.statement || '', 'sql')}
-                    className="flex items-center gap-1 text-slate-300 hover:text-white rounded bg-slate-900 px-2 py-0.5 border border-slate-800"
+                    onClick={() => copyToClipboard(dbInfo.statement || '', 'sql')}
+                    className="text-muted-foreground hover:text-foreground flex items-center gap-1"
                   >
-                    {copiedKey === 'sql' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                    <span>Copy</span>
-                  </button>
-                )}
-              </div>
-              <pre className="max-h-56 overflow-x-auto rounded-lg bg-slate-950 p-3 text-[11px] font-mono text-slate-200 leading-relaxed border border-slate-800">
-                {dbInfo.formattedStatement || dbInfo.statement || dbInfo.displaySummary}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        {/* Root Cause & Exception Evidence Callout */}
-        {isError && (
-          <div className="rounded-xl border border-rose-800/60 bg-rose-950/30 p-4 space-y-3">
-            <div className="flex items-center gap-2 text-rose-300 font-semibold text-xs">
-              <AlertOctagon className="h-4 w-4 text-rose-400 shrink-0" />
-              <span>Evidence: Span Execution Failure</span>
-            </div>
-
-            {span.statusMessage && (
-              <p className="text-xs text-rose-200 bg-rose-950/70 p-2.5 rounded-lg border border-rose-800/40 font-mono leading-relaxed">
-                {span.statusMessage}
-              </p>
-            )}
-
-            {stackTrace && (
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span className="font-semibold text-rose-400/90">Captured Stack Trace</span>
-                  <button
-                    onClick={() => copyToClipboard(stackTrace, 'stack')}
-                    className="flex items-center gap-1 text-slate-300 hover:text-white rounded bg-slate-900 px-2 py-0.5 border border-slate-800"
-                  >
-                    {copiedKey === 'stack' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-                    <span>Copy</span>
+                    {copiedKey === 'sql' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    <span>Copy SQL</span>
                   </button>
                 </div>
-                <pre className="max-h-64 overflow-x-auto rounded-lg bg-slate-950 p-3 text-[11px] font-mono text-rose-300/90 leading-relaxed border border-slate-800/80">
-                  {stackTrace}
+                <pre className="rounded-md border border-border bg-muted/60 p-2.5 text-[11px] text-foreground font-mono overflow-x-auto whitespace-pre-wrap">
+                  {dbInfo.statement}
                 </pre>
               </div>
             )}
           </div>
         )}
 
-        {/* Attributes Section with Search */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-              <Code2 className="h-3.5 w-3.5 text-cyan-400" />
-              <span>Attributes ({allAttributes.length})</span>
+        {/* Stack Trace / Exception Box */}
+        {isError && stackTrace && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-destructive flex items-center gap-1.5 font-sans">
+                <AlertOctagon className="h-3.5 w-3.5" />
+                Exception Stack Trace
+              </span>
+              <button
+                onClick={() => copyToClipboard(stackTrace, 'stack')}
+                className="text-muted-foreground hover:text-foreground text-[10px] flex items-center gap-1"
+              >
+                {copiedKey === 'stack' ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                <span>Copy Trace</span>
+              </button>
             </div>
+            <pre className="rounded-md border border-destructive/20 bg-card/60 p-2.5 text-[11px] text-destructive font-mono overflow-x-auto whitespace-pre-wrap max-h-56">
+              {stackTrace}
+            </pre>
+          </div>
+        )}
 
+        {/* Span Attributes Section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between font-sans">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Span Attributes ({allAttributes.length})
+            </span>
             <div className="relative w-44">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-slate-500" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search attributes..."
+                placeholder="Filter attributes..."
                 value={attrSearch}
                 onChange={(e) => setAttrSearch(e.target.value)}
-                className="w-full h-7 pl-7 pr-2 rounded-md border border-slate-800 bg-slate-900 text-[11px] text-slate-200 placeholder:text-slate-500 outline-none focus:border-cyan-500"
+                className="w-full h-6 pl-6 pr-2 rounded border border-input bg-card text-[11px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
           </div>
 
-          {filteredAttributes.length === 0 ? (
-            <div className="rounded-lg border border-slate-800 bg-slate-900/30 p-4 text-center text-xs text-slate-500">
-              No matching attributes found.
-            </div>
-          ) : (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/40 divide-y divide-slate-800/60 overflow-hidden text-xs">
-              {filteredAttributes.map(([key, val]) => (
-                <div key={key} className="grid grid-cols-3 p-2.5 gap-2 hover:bg-slate-800/30 transition-colors">
-                  <span className="font-mono text-slate-400 break-all select-all text-[11px]">{key}</span>
-                  <span className="col-span-2 font-mono text-slate-200 break-all select-all text-[11px]">
-                    {typeof val === 'object' ? JSON.stringify(val) : String(val)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Events / Annotations */}
-        {span.events && span.events.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-              <ListTree className="h-3.5 w-3.5 text-indigo-400" />
-              <span>Span Events ({span.events.length})</span>
-            </div>
-
-            <div className="space-y-2">
-              {span.events.map((evt, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-800 bg-slate-900/40 p-3 text-xs space-y-1.5">
-                  <div className="flex items-center justify-between font-mono">
-                    <span className="font-bold text-slate-200">{evt.name}</span>
-                    <span className="text-[10px] text-slate-500">{evt.timeUnixNano}</span>
+          <div className="rounded-lg border border-border bg-card divide-y divide-border overflow-hidden">
+            {filteredAttributes.length === 0 ? (
+              <div className="p-4 text-center text-xs text-muted-foreground font-sans">
+                No matching attributes found.
+              </div>
+            ) : (
+              filteredAttributes.map(([key, val]) => {
+                const strVal = typeof val === 'object' ? JSON.stringify(val) : String(val);
+                return (
+                  <div key={key} className="p-2 hover:bg-muted/40 flex items-start justify-between gap-3 group">
+                    <span className="text-primary font-bold shrink-0 max-w-[180px] truncate" title={key}>
+                      {key}
+                    </span>
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <span className="text-foreground truncate max-w-xs text-right" title={strVal}>
+                        {strVal}
+                      </span>
+                      <button
+                        onClick={() => copyToClipboard(strVal, key)}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 text-muted-foreground hover:text-foreground transition-opacity"
+                        title="Copy attribute value"
+                      >
+                        {copiedKey === key ? (
+                          <Check className="h-3 w-3 text-emerald-500" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  {evt.attributes && Object.keys(evt.attributes).length > 0 && (
-                    <pre className="text-[10px] text-slate-300 font-mono overflow-x-auto bg-slate-950/70 p-2 rounded-lg border border-slate-800">
-                      {JSON.stringify(evt.attributes, null, 2)}
-                    </pre>
-                  )}
-                </div>
-              ))}
-            </div>
+                );
+              })
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

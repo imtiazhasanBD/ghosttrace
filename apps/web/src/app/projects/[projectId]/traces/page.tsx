@@ -11,11 +11,20 @@ import {
   Clock,
   Layers,
   Radio,
+  Copy,
+  Check,
+  ChevronRight,
+  RotateCcw,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../../../../lib/ProjectTelemetryContext';
 import { fetchTraces } from '../../../../lib/api';
 import { TraceEntity } from '@ghosttrace/shared-types';
 import { LiveTailConsole } from '../../../../components/LiveTailConsole';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../../components/ui/Card';
+import { Badge, MethodBadge } from '../../../../components/ui/Badge';
+import { Button } from '../../../../components/ui/Button';
+import { Input } from '../../../../components/ui/Input';
+import { cn } from '../../../../lib/utils';
 
 export default function TracesPage() {
   const router = useRouter();
@@ -38,6 +47,14 @@ export default function TracesPage() {
   const [traces, setTraces] = useState<TraceEntity[]>([]);
   const [total, setTotal] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
+
+  const copyToClipboard = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(id);
+    setCopiedTraceId(id);
+    setTimeout(() => setCopiedTraceId(null), 2000);
+  };
 
   const durationBounds = useMemo(() => {
     if (durationFilter === 'FAST') return { maxDurationMs: 200 };
@@ -74,113 +91,145 @@ export default function TracesPage() {
     return { method: 'SPAN', path: name };
   };
 
-  const getMethodBadgeClass = (method: string) => {
-    switch (method) {
-      case 'GET':
-        return 'bg-blue-950/80 text-blue-400 border-blue-800/60';
-      case 'POST':
-        return 'bg-emerald-950/80 text-emerald-400 border-emerald-800/60';
-      case 'PUT':
-      case 'PATCH':
-        return 'bg-amber-950/80 text-amber-400 border-amber-800/60';
-      case 'DELETE':
-        return 'bg-rose-950/80 text-rose-400 border-rose-800/60';
-      default:
-        return 'bg-slate-800 text-slate-300 border-slate-700';
-    }
-  };
-
   const getDurationColor = (ms: number) => {
-    if (ms < 200) return 'text-emerald-400';
-    if (ms < 800) return 'text-amber-400';
-    return 'text-rose-400';
+    if (ms < 200) return 'text-emerald-600 dark:text-emerald-400';
+    if (ms < 800) return 'text-amber-600 dark:text-amber-400';
+    return 'text-rose-600 dark:text-rose-400';
   };
 
   const allServices = metrics?.services || [];
 
+  const hasActiveFilters =
+    statusFilter !== 'ALL' || serviceFilter !== 'ALL' || searchQuery !== '' || durationFilter !== 'ALL';
+
+  const resetFilters = () => {
+    setStatusFilter('ALL');
+    setServiceFilter('ALL');
+    setSearchQuery('');
+    setDurationFilter('ALL');
+  };
+
   return (
     <div className="space-y-4">
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 rounded-xl border border-slate-800/80 bg-slate-900/40 p-4">
-        <div className="relative flex-1 max-w-lg">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search operation name, service, or trace ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-8 pl-9 pr-3 rounded-md border border-slate-800 bg-slate-950 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-cyan-500"
-          />
+      {/* 1. Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-3.5">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Layers className="h-4 w-4 text-primary" />
+            Distributed Trace Explorer
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Query, filter, and inspect end-to-end distributed traces and latency bottlenecks
+          </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 text-xs">
-          {/* Service Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500">Service:</span>
-            <select
-              aria-label="Filter traces by service"
-              value={serviceFilter}
-              onChange={(e) => setServiceFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-800 bg-slate-900 px-2.5 text-xs text-slate-200 outline-none focus:border-cyan-500"
-            >
-              <option value="ALL">All Services</option>
-              {allServices.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500">Status:</span>
-            <select
-              aria-label="Filter traces by status"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-800 bg-slate-900 px-2.5 text-xs text-slate-200 outline-none focus:border-cyan-500"
-            >
-              <option value="ALL">All Statuses</option>
-              <option value="OK">OK Only</option>
-              <option value="ERROR">Errors Only</option>
-            </select>
-          </div>
-
-          {/* Duration Preset Filter */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-slate-500">Duration:</span>
-            <select
-              aria-label="Filter traces by duration"
-              value={durationFilter}
-              onChange={(e) => setDurationFilter(e.target.value)}
-              className="h-8 rounded-md border border-slate-800 bg-slate-900 px-2.5 text-xs text-slate-200 outline-none focus:border-cyan-500"
-            >
-              <option value="ALL">Any Latency</option>
-              <option value="FAST">&lt; 200 ms</option>
-              <option value="MEDIUM">200 - 1000 ms</option>
-              <option value="SLOW">&gt; 1000 ms</option>
-            </select>
-          </div>
-
-          {/* Live Tail Toggle Button */}
-          <button
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant={showLiveTail ? 'subtle' : 'outline'}
+            size="sm"
             onClick={() => setShowLiveTail(!showLiveTail)}
-            className={`flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs font-semibold transition-colors ${
-              showLiveTail
-                ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-500/20'
-                : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800'
-            }`}
+            className="text-xs font-semibold"
             title="Toggle Live Telemetry Tail streaming"
           >
-            <Radio className={`h-3.5 w-3.5 ${showLiveTail ? 'text-cyan-400 animate-pulse' : 'text-slate-400'}`} />
+            <Radio className={cn('h-3.5 w-3.5 mr-1.5', showLiveTail ? 'text-primary animate-pulse' : 'text-muted-foreground')} />
             <span>Live Tail</span>
-            {showLiveTail && (
-              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping ml-0.5" />
-            )}
-          </button>
+            {showLiveTail && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-ping ml-1" />}
+          </Button>
         </div>
       </div>
+
+      {/* 2. Filter & Query Toolbar */}
+      <Card>
+        <CardContent className="p-3.5 space-y-3">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-lg">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search operation name, service, or trace ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-card text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring transition-colors"
+              />
+            </div>
+
+            {/* Filter Dropdowns */}
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {/* Service Filter */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-[11px] font-medium">Service:</span>
+                <select
+                  aria-label="Filter traces by service"
+                  value={serviceFilter}
+                  onChange={(e) => setServiceFilter(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-card px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
+                >
+                  <option value="ALL">All Services</option>
+                  {allServices.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status Filter */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-[11px] font-medium">Status:</span>
+                <div className="flex items-center rounded-md border border-border bg-card p-0.5 text-xs">
+                  {[
+                    { label: 'All', value: 'ALL' },
+                    { label: 'OK', value: 'OK' },
+                    { label: 'Error', value: 'ERROR' },
+                  ].map((st) => (
+                    <button
+                      key={st.value}
+                      onClick={() => setStatusFilter(st.value)}
+                      className={cn(
+                        'px-2 py-0.5 rounded text-[11px] font-medium transition-colors',
+                        statusFilter === st.value
+                          ? 'bg-accent text-accent-foreground font-semibold shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {st.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration Preset Filter */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground text-[11px] font-medium">Duration:</span>
+                <select
+                  aria-label="Filter traces by duration"
+                  value={durationFilter}
+                  onChange={(e) => setDurationFilter(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-card px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
+                >
+                  <option value="ALL">Any Latency</option>
+                  <option value="FAST">&lt; 200 ms</option>
+                  <option value="MEDIUM">200 - 1000 ms</option>
+                  <option value="SLOW">&gt; 1000 ms</option>
+                </select>
+              </div>
+
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={resetFilters}
+                  className="text-primary hover:text-primary/80 h-7"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  <span>Reset</span>
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Real-Time Live Tail Streaming Console */}
       {showLiveTail && currentProjectId && (
@@ -189,115 +238,156 @@ export default function TracesPage() {
         </div>
       )}
 
-      {/* Traces Count & Table */}
-      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+      {/* 3. Results Summary Bar */}
+      <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
         <span>
-          Showing <strong className="text-slate-200">{traces.length}</strong> of{' '}
-          <strong className="text-slate-200">{total}</strong> traces
+          Showing <strong className="text-foreground">{traces.length}</strong> of{' '}
+          <strong className="text-foreground">{total}</strong> traces
         </span>
-        {(statusFilter !== 'ALL' || serviceFilter !== 'ALL' || searchQuery || durationFilter !== 'ALL') && (
-          <button
-            onClick={() => {
-              setStatusFilter('ALL');
-              setServiceFilter('ALL');
-              setSearchQuery('');
-              setDurationFilter('ALL');
-            }}
-            className="text-cyan-400 hover:text-cyan-300 font-medium"
-          >
-            Reset filters
-          </button>
-        )}
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 overflow-hidden shadow-xl">
-        {isLoading ? (
-          <div className="p-12 text-center space-y-2">
-            <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-cyan-500 border-t-transparent" />
-            <p className="text-xs text-slate-400">Loading traces...</p>
-          </div>
-        ) : traces.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <p className="text-sm font-semibold text-slate-300">No Traces Found</p>
-            <p className="text-xs text-slate-500">Try adjusting your search query or filter parameters.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="border-b border-slate-800 bg-slate-900/80 text-slate-400 font-medium">
-                <tr>
-                  <th className="py-3 px-4">STATUS</th>
-                  <th className="py-3 px-4">METHOD & OPERATION</th>
-                  <th className="py-3 px-4">SERVICE</th>
-                  <th className="py-3 px-4">DURATION</th>
-                  <th className="py-3 px-4">SPANS</th>
-                  <th className="py-3 px-4">TIMESTAMP</th>
-                  <th className="py-3 px-4 text-right">ACTION</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/40 font-mono">
-                {traces.map((t) => {
-                  const { method, path } = parseOperation(t.rootSpanName);
-                  const isError = t.statusCode === 'ERROR';
+      {/* 4. Traces Table */}
+      <Card>
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-12 text-center space-y-2">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p className="text-xs text-muted-foreground font-mono">Querying trace store...</p>
+            </div>
+          ) : traces.length === 0 ? (
+            <div className="p-12 text-center space-y-2">
+              <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground mb-1">
+                <Layers className="h-5 w-5" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">No Traces Found</p>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                No matching traces found for the current query and filters. Try clearing the search or duration bounds.
+              </p>
+              {hasActiveFilters && (
+                <Button variant="outline" size="sm" onClick={resetFilters} className="mt-2 text-xs">
+                  Reset All Filters
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <th className="py-2.5 px-3.5 w-12 text-center">Status</th>
+                    <th className="py-2.5 px-3">Method & Operation</th>
+                    <th className="py-2.5 px-3 w-36">Trace ID</th>
+                    <th className="py-2.5 px-3 w-32">Service</th>
+                    <th className="py-2.5 px-3 w-24 text-right">Duration</th>
+                    <th className="py-2.5 px-3 w-20 text-center">Spans</th>
+                    <th className="py-2.5 px-3.5 w-24 text-right">Timestamp</th>
+                    <th className="py-2.5 px-3.5 w-28 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {traces.map((t) => {
+                    const { method, path } = parseOperation(t.rootSpanName);
+                    const isError = t.statusCode === 'ERROR';
 
-                  return (
-                    <tr
-                      key={t.id}
-                      onClick={() => router.push(`/projects/${currentProjectId}/traces/${t.id}`)}
-                      className="cursor-pointer hover:bg-slate-800/30 transition-colors"
-                    >
-                      <td className="py-3 px-4">
-                        <span
-                          className={`rounded px-2 py-0.5 text-[10px] font-bold border ${
-                            isError
-                              ? 'border-rose-800 bg-rose-950/80 text-rose-400'
-                              : 'border-emerald-800 bg-emerald-950/80 text-emerald-400'
-                          }`}
-                        >
-                          {t.statusCode}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`rounded px-1.5 py-0.2 text-[10px] font-bold border ${getMethodBadgeClass(
-                              method
-                            )}`}
+                    return (
+                      <tr
+                        key={t.id}
+                        onClick={() => router.push(`/projects/${currentProjectId}/traces/${t.id}`)}
+                        className="group hover:bg-muted/40 cursor-pointer transition-colors"
+                      >
+                        {/* Status Icon */}
+                        <td className="py-2.5 px-3.5 text-center">
+                          {isError ? (
+                            <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 inline" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 inline" />
+                          )}
+                        </td>
+
+                        {/* Operation / Method */}
+                        <td className="py-2.5 px-3">
+                          <div className="flex items-center gap-2 max-w-md">
+                            <MethodBadge method={method} />
+                            <span className="font-mono text-xs font-semibold text-foreground group-hover:text-primary transition-colors truncate">
+                              {path}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Trace ID with copy button */}
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <span className="truncate max-w-[85px]" title={t.id}>
+                              {t.id.slice(0, 8)}...
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => copyToClipboard(t.id, e)}
+                              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                              title={copiedTraceId === t.id ? 'Copied!' : 'Copy trace ID'}
+                              aria-label="Copy trace ID"
+                            >
+                              {copiedTraceId === t.id ? (
+                                <Check className="h-3 w-3 text-emerald-500" />
+                              ) : (
+                                <Copy className="h-3 w-3" />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Service name */}
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground truncate">
+                          <Badge variant="secondary" size="sm" className="font-mono truncate max-w-[120px]">
+                            {t.serviceName}
+                          </Badge>
+                        </td>
+
+                        {/* Duration */}
+                        <td className="py-2.5 px-3 text-right font-mono font-semibold text-xs">
+                          <span className={getDurationColor(t.durationMs)}>
+                            {t.durationMs.toFixed(1)} ms
+                          </span>
+                        </td>
+
+                        {/* Span count */}
+                        <td className="py-2.5 px-3 text-center font-mono text-[11px] text-muted-foreground">
+                          {t.spanCount}
+                        </td>
+
+                        {/* Timestamp */}
+                        <td className="py-2.5 px-3.5 text-right font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                          {new Date(t.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                          })}
+                        </td>
+
+                        {/* Action Link Button */}
+                        <td className="py-2.5 px-3.5 text-right">
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/projects/${currentProjectId}/traces/${t.id}`);
+                            }}
+                            className="text-[11px] group-hover:border-primary/40 group-hover:text-primary transition-colors"
                           >
-                            {method}
-                          </span>
-                          <span className="font-semibold text-white truncate max-w-xs sm:max-w-md" title={path}>
-                            {path}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4 text-slate-400 font-sans">{t.serviceName}</td>
-                      <td className={`py-3 px-4 font-bold ${getDurationColor(t.durationMs)}`}>
-                        {t.durationMs.toFixed(1)} ms
-                      </td>
-                      <td className="py-3 px-4 text-cyan-400">{t.spanCount}</td>
-                      <td className="py-3 px-4 text-slate-400 font-sans">
-                        {new Date(t.createdAt).toLocaleTimeString()}
-                      </td>
-                      <td className="py-3 px-4 text-right font-sans">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            router.push(`/projects/${currentProjectId}/traces/${t.id}`);
-                          }}
-                          className="rounded bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-slate-200 transition-colors"
-                        >
-                          Inspect Waterfall
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+                            <span>Inspect</span>
+                            <ChevronRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

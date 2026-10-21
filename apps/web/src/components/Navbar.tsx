@@ -118,11 +118,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                    isActive
+                  className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${isActive
                       ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 shadow-sm'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 border border-transparent'
-                  }`}
+                    }`}
                 >
                   <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
                   <span>{item.label}</span>
@@ -153,7 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {showDemoMenu && (
               <div
-                className="absolute right-0 mt-1.5 w-60 rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 space-y-1.5 animate-in fade-in"
+                className="absolute right-0 mt-1.5 w-60 rounded-md border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 space-y-1.5 animate-in fade-in"
                 onMouseLeave={() => setShowDemoMenu(false)}
               >
                 <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
@@ -195,11 +194,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="relative">
             <button
               onClick={() => setShowIntervalMenu(!showIntervalMenu)}
-              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all border ${
-                isAutoRefresh
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all border ${isAutoRefresh
                   ? 'border-cyan-500/30 bg-cyan-950/40 text-cyan-300'
                   : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
               title="Configure live telemetry polling frequency"
             >
               <Radio className={`h-3 w-3 ${isAutoRefresh ? 'animate-pulse text-cyan-400' : 'text-slate-500'}`} />
@@ -211,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {showIntervalMenu && (
               <div
-                className="absolute right-0 mt-1.5 w-44 rounded-xl border border-slate-800 bg-slate-900 p-1.5 shadow-2xl z-50 text-xs space-y-1 animate-in fade-in"
+                className="absolute right-0 mt-1.5 w-44 rounded-md border border-slate-800 bg-slate-900 p-1.5 shadow-2xl z-50 text-xs space-y-1 animate-in fade-in"
                 onMouseLeave={() => setShowIntervalMenu(false)}
               >
                 <div className="px-2 py-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
@@ -225,11 +223,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                       setRefreshInterval(opt.value);
                       setShowIntervalMenu(false);
                     }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${
-                      isAutoRefresh && refreshInterval === opt.value
+                    className={`w-full text-left px-2.5 py-1.5 rounded-md font-medium transition-colors ${isAutoRefresh && refreshInterval === opt.value
                         ? 'bg-cyan-500/20 text-cyan-300 font-semibold'
                         : 'text-slate-300 hover:bg-slate-800'
-                    }`}
+                      }`}
                   >
                     {opt.label}
                   </button>
@@ -276,7 +273,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
                 {showUserMenu && (
                   <div
-                    className="absolute right-0 mt-1.5 w-56 rounded-xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 text-xs space-y-2 animate-in fade-in"
+                    className="absolute right-0 mt-1.5 w-56 rounded-md border border-slate-800 bg-slate-900 p-2 shadow-2xl z-50 text-xs space-y-2 animate-in fade-in"
                     onMouseLeave={() => setShowUserMenu(false)}
                   >
                     <div className="px-2 py-1.5 border-b border-slate-800 space-y-0.5">
@@ -381,11 +378,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setActiveTab(item.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`w-full flex items-center justify-between rounded-lg p-2.5 text-xs font-medium ${
-                  isActive
+                className={`w-full flex items-center justify-between rounded-lg p-2.5 text-xs font-medium ${isActive
                     ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
                     : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   <Icon className="h-4 w-4" />

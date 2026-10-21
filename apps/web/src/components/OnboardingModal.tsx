@@ -23,6 +23,10 @@ import {
   Database,
   ExternalLink,
 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { cn } from '../lib/utils';
 
 interface OnboardingModalProps {
   projectId: string;
@@ -99,19 +103,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             },
             scopeSpans: [
               {
-                scope: { name: 'ghosttrace.onboarding-wizard' },
+                scope: { name: '@ghosttrace/sdk-test-probe', version: '1.0.0' },
                 spans: [
                   {
                     traceId: randomTraceId,
                     spanId: randomSpanId,
-                    name: 'GhostTrace.ConnectionVerify',
-                    kind: 1, // SERVER
-                    startTimeUnixNano: String(BigInt(Date.now()) * BigInt(1000000)),
-                    endTimeUnixNano: String(BigInt(Date.now() + 25) * BigInt(1000000)),
+                    name: 'GhostTrace.Probe.VerifyConnection',
+                    kind: 1, // INTERNAL
+                    startTimeUnixNano: String(Date.now() * 1000000),
+                    endTimeUnixNano: String((Date.now() + 15) * 1000000),
                     status: { code: 1 }, // OK
                     attributes: [
-                      { key: 'http.status_code', value: { intValue: 200 } },
-                      { key: 'probe.wizard_step', value: { stringValue: 'step_5_verified' } },
+                      { key: 'probe.triggered_by', value: { stringValue: 'OnboardingModal.TestRunner' } },
+                      { key: 'probe.version', value: { stringValue: 'v1.0-prod' } },
                     ],
                   },
                 ],
@@ -125,314 +129,293 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-ghosttrace-key': createdKey?.rawApiKey || 'gt_live_default_demo_project_key_test_12345',
+          'x-ghosttrace-key': activeKeyString,
         },
         body: JSON.stringify(testTrace),
       });
 
-      if (res.ok) {
-        setPingStatus('success');
-        setReceivedTraceId(randomTraceId);
-      } else {
-        setPingStatus('failed');
+      if (!res.ok) {
+        throw new Error('Ingestion probe rejected');
       }
-    } catch {
+
+      setReceivedTraceId(randomTraceId);
+      setPingStatus('success');
+      onKeysUpdated();
+    } catch (err) {
+      console.error(err);
       setPingStatus('failed');
     }
   };
 
   const steps = [
-    { num: 1, title: 'Account & Workspace', desc: 'Sign up & team workspace' },
-    { num: 2, title: 'Project & Environment', desc: 'App name & environment' },
-    { num: 3, title: 'Install SDK', desc: 'npm / pnpm packages' },
-    { num: 4, title: 'Configure API Key', desc: 'Secure .env variables' },
-    { num: 5, title: 'Test Connection', desc: 'Live telemetry probe' },
+    { num: 1, title: 'Workspace', desc: 'Tenant isolation' },
+    { num: 2, title: 'Environment', desc: 'Runtime cluster' },
+    { num: 3, title: 'Install SDK', desc: 'OTel framework' },
+    { num: 4, title: 'API Keys', desc: 'Hashed tokens' },
+    { num: 5, title: 'Verify', desc: 'Ingestion test' },
   ];
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      {/* 5-Step Stepper Navigation */}
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 shadow-xl backdrop-blur-md">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-lg font-bold text-white flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-cyan-400" />
-              GhostTrace Project Onboarding Wizard
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Follow these 5 steps to connect any Node.js, NestJS or Express backend to GhostTrace
-            </p>
-          </div>
+    <div className="space-y-5 max-w-4xl mx-auto">
+      {/* 5-Step Process Bar */}
+      <Card>
+        <CardContent className="p-3">
+          <div className="grid grid-cols-5 gap-2">
+            {steps.map((s) => {
+              const isCurrent = activeStep === s.num;
+              const isCompleted = activeStep > s.num;
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setActiveStep((prev) => Math.max(1, prev - 1))}
-              disabled={activeStep === 1}
-              className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-300 hover:text-white disabled:opacity-40 transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              <span>Back</span>
-            </button>
-            <button
-              onClick={() => setActiveStep((prev) => Math.min(5, prev + 1))}
-              disabled={activeStep === 5}
-              className="flex items-center gap-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 text-xs font-semibold text-slate-950 disabled:opacity-40 transition-colors shadow-sm"
-            >
-              <span>Next Step</span>
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Stepper visual bar */}
-        <div className="grid grid-cols-5 gap-2 relative">
-          {steps.map((s) => {
-            const isCompleted = activeStep > s.num;
-            const isCurrent = activeStep === s.num;
-
-            return (
-              <button
-                key={s.num}
-                onClick={() => setActiveStep(s.num)}
-                className={`flex flex-col items-center text-center p-2.5 rounded-xl border transition-all text-xs ${
-                  isCurrent
-                    ? 'border-cyan-500/50 bg-cyan-950/40 text-cyan-300 shadow-md ring-1 ring-cyan-500/30'
-                    : isCompleted
-                    ? 'border-emerald-800/40 bg-emerald-950/20 text-emerald-300'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                <div
-                  className={`flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold mb-1.5 ${
+              return (
+                <button
+                  key={s.num}
+                  type="button"
+                  onClick={() => setActiveStep(s.num)}
+                  className={cn(
+                    'flex flex-col items-center justify-center p-2 rounded-md border text-center transition-all',
                     isCurrent
-                      ? 'bg-cyan-500 text-slate-950'
+                      ? 'border-primary bg-primary/10 text-primary font-bold shadow-xs'
                       : isCompleted
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}
+                      ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium'
+                      : 'border-border bg-card text-muted-foreground hover:text-foreground'
+                  )}
                 >
-                  {isCompleted ? <Check className="h-3.5 w-3.5" /> : s.num}
-                </div>
-                <span className="font-semibold truncate w-full text-[11px]">{s.title}</span>
-                <span className="hidden lg:inline text-[9px] text-slate-400 truncate w-full">{s.desc}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                  <div
+                    className={cn(
+                      'flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-bold mb-1',
+                      isCurrent
+                        ? 'bg-primary text-primary-foreground'
+                        : isCompleted
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-muted text-muted-foreground'
+                    )}
+                  >
+                    {isCompleted ? <Check className="h-3.5 w-3.5" /> : s.num}
+                  </div>
+                  <span className="font-semibold truncate w-full text-[11px]">{s.title}</span>
+                  <span className="hidden md:inline text-[10px] text-muted-foreground truncate w-full">{s.desc}</span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* STEP 1: ACCOUNT & WORKSPACE */}
       {activeStep === 1 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6 animate-in fade-in">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-cyan-950/60 border border-cyan-800/50 text-cyan-400">
-              <User className="h-6 w-6" />
+        <Card className="animate-in fade-in">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                <User className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary">Step 1 of 5</span>
+                <h3 className="text-base font-bold text-foreground">Account & Team Workspace</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Your account owns team workspaces and enforces strict tenant isolation on every trace query.
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-400">Step 1 of 5</span>
-              <h3 className="text-base font-bold text-white">Account & Team Workspace</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Your account owns team workspaces and enforces strict tenant isolation on every trace query.
-              </p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-              <span className="text-xs font-semibold text-slate-300">Active User Account</span>
-              <div className="flex items-center gap-3 pt-1">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 text-white font-bold flex items-center justify-center text-xs">
-                  D
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Active User Account</span>
+                <div className="flex items-center gap-2.5 pt-1">
+                  <div className="h-7 w-7 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold flex items-center justify-center text-xs">
+                    D
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground text-xs">Demo Architect</div>
+                    <div className="text-[11px] text-muted-foreground font-mono">demo@ghosttrace.io</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="font-semibold text-white text-xs">Demo Architect</div>
-                  <div className="text-[11px] text-slate-400 font-mono">demo@ghosttrace.io</div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Active Workspace</span>
+                <div className="flex items-center gap-2 pt-1">
+                  <Badge variant="default" size="sm" className="font-mono font-bold">
+                    Default Workspace
+                  </Badge>
+                  <span className="text-xs text-muted-foreground font-mono">slug: default-workspace</span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-              <span className="text-xs font-semibold text-slate-300">Active Workspace</span>
-              <div className="flex items-center gap-2 pt-1">
-                <span className="rounded bg-cyan-950 px-2 py-1 text-xs font-bold text-cyan-400 border border-cyan-800 font-mono">
-                  Default Workspace
-                </span>
-                <span className="text-xs text-slate-500 font-mono">slug: default-workspace</span>
-              </div>
+            <div className="flex justify-end pt-1">
+              <Button size="sm" onClick={() => setActiveStep(2)} className="text-xs">
+                <span>Continue to Step 2</span>
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
             </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <button
-              onClick={() => setActiveStep(2)}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 shadow-md transition-colors"
-            >
-              <span>Continue to Step 2 (Project Setup)</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* STEP 2: PROJECT & ENVIRONMENT */}
       {activeStep === 2 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6 animate-in fade-in">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-indigo-950/60 border border-indigo-800/50 text-indigo-400">
-              <FolderGit2 className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-indigo-400">Step 2 of 5</span>
-              <h3 className="text-base font-bold text-white">Project Identity & Environment</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Choose an application identifier and target runtime cluster for tagging traces.
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Project Name (Application Service Name)</label>
-              <input
-                type="text"
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                placeholder="e.g. dentsoft-saas-server or orders-api"
-                className="w-full max-w-md h-9 rounded-lg border border-slate-800 bg-slate-950 px-3 text-xs text-slate-100 font-mono outline-none focus:border-cyan-500"
-              />
-              <p className="text-[11px] text-slate-500 mt-1">
-                This will match the <code className="text-cyan-400">GHOSTTRACE_SERVICE_NAME</code> in your environment variables.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-2">Target Cluster Environment</label>
-              <div className="grid grid-cols-3 gap-3 max-w-md">
-                {(['development', 'staging', 'production'] as const).map((env) => (
-                  <button
-                    key={env}
-                    type="button"
-                    onClick={() => setSelectedEnv(env)}
-                    className={`rounded-lg p-2.5 text-xs font-semibold uppercase tracking-wider border transition-all ${
-                      selectedEnv === env
-                        ? 'border-cyan-500 bg-cyan-950/40 text-cyan-300 ring-1 ring-cyan-500/30'
-                        : 'border-slate-800 bg-slate-950 text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {env}
-                  </button>
-                ))}
+        <Card className="animate-in fade-in">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                <FolderGit2 className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-indigo-500">Step 2 of 5</span>
+                <h3 className="text-base font-bold text-foreground">Project Identity & Environment</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Choose an application identifier and target runtime cluster for tagging traces.
+                </p>
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-between pt-2">
-            <button
-              onClick={() => setActiveStep(1)}
-              className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-300 hover:text-white"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </button>
-            <button
-              onClick={() => setActiveStep(3)}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 shadow-md transition-colors"
-            >
-              <span>Continue to Step 3 (SDK Installation)</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-1.5">Project Name (Application Service Name)</label>
+                <input
+                  type="text"
+                  value={projectName}
+                  onChange={(e) => setProjectName(e.target.value)}
+                  placeholder="e.g. dentsoft-saas-server or orders-api"
+                  className="w-full max-w-md h-8 rounded-md border border-input bg-card px-3 text-xs text-foreground font-mono outline-none focus:ring-2 focus:ring-ring"
+                />
+                <p className="text-[11px] text-muted-foreground mt-1 font-mono">
+                  Matches <code className="text-primary font-bold">GHOSTTRACE_SERVICE_NAME</code> in your environment variables.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-foreground mb-2">Target Cluster Environment</label>
+                <div className="grid grid-cols-3 gap-2.5 max-w-md">
+                  {(['development', 'staging', 'production'] as const).map((env) => (
+                    <button
+                      key={env}
+                      type="button"
+                      onClick={() => setSelectedEnv(env)}
+                      className={cn(
+                        'rounded-md p-2 text-xs font-semibold uppercase tracking-wider border transition-all text-center',
+                        selectedEnv === env
+                          ? 'border-primary bg-primary/10 text-primary shadow-xs'
+                          : 'border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted/40'
+                      )}
+                    >
+                      {env}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-1">
+              <Button variant="outline" size="sm" onClick={() => setActiveStep(1)} className="text-xs">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                <span>Back</span>
+              </Button>
+              <Button size="sm" onClick={() => setActiveStep(3)} className="text-xs">
+                <span>Continue to Step 3</span>
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* STEP 3: SDK INSTALLATION */}
       {activeStep === 3 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6 animate-in fade-in">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-cyan-950/60 border border-cyan-800/50 text-cyan-400">
-              <Terminal className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-cyan-400">Step 3 of 5</span>
-              <h3 className="text-base font-bold text-white">Install GhostTrace SDK & Instrumentations</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Install the OpenTelemetry-based Node.js SDK and automatic framework plugins into your service.
-              </p>
-            </div>
-          </div>
-
-          {/* Package manager install command */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-300">
-              <span className="font-semibold">Terminal Install Command:</span>
-              <button
-                onClick={() =>
-                  copyToClipboard(
-                    'pnpm add @ghosttrace/sdk-node @ghosttrace/instrumentation-nest @ghosttrace/instrumentation-prisma',
-                    'installCmd'
-                  )
-                }
-                className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-[11px]"
-              >
-                {copiedKey === 'installCmd' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                <span>{copiedKey === 'installCmd' ? 'Copied' : 'Copy Command'}</span>
-              </button>
-            </div>
-            <pre className="rounded-xl border border-slate-800 bg-slate-950 p-3.5 text-xs font-mono text-cyan-300 select-all overflow-x-auto shadow-inner">
-              pnpm add @ghosttrace/sdk-node @ghosttrace/instrumentation-nest @ghosttrace/instrumentation-prisma
-            </pre>
-          </div>
-
-          {/* Code snippet tabs */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-300">Application Integration Code:</span>
-              <div className="flex rounded-lg border border-slate-800 bg-slate-950 p-1 text-xs">
-                <button
-                  onClick={() => setSelectedSnippetTab('nest')}
-                  className={`px-2.5 py-1 rounded font-medium transition-colors ${
-                    selectedSnippetTab === 'nest' ? 'bg-cyan-500/20 text-cyan-300 font-semibold' : 'text-slate-400'
-                  }`}
-                >
-                  src/tracing.ts & main.ts
-                </button>
-                <button
-                  onClick={() => setSelectedSnippetTab('prisma')}
-                  className={`px-2.5 py-1 rounded font-medium transition-colors ${
-                    selectedSnippetTab === 'prisma' ? 'bg-cyan-500/20 text-cyan-300 font-semibold' : 'text-slate-400'
-                  }`}
-                >
-                  Prisma Tracing
-                </button>
-                <button
-                  onClick={() => setSelectedSnippetTab('express')}
-                  className={`px-2.5 py-1 rounded font-medium transition-colors ${
-                    selectedSnippetTab === 'express' ? 'bg-cyan-500/20 text-cyan-300 font-semibold' : 'text-slate-400'
-                  }`}
-                >
-                  Express.js Middleware
-                </button>
+        <Card className="animate-in fade-in">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+                <Terminal className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-primary">Step 3 of 5</span>
+                <h3 className="text-base font-bold text-foreground">Install GhostTrace SDK & Instrumentations</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Install the OpenTelemetry-based Node.js SDK and automatic framework plugins into your service.
+                </p>
               </div>
             </div>
 
-            {selectedSnippetTab === 'nest' && (
-              <div className="space-y-3">
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                    <span>1. Create src/tracing.ts (must initialize before any other module loads):</span>
-                    <button
-                      onClick={() =>
-                        copyToClipboard(
-                          `import { initGhostTrace } from '@ghosttrace/sdk-node';\n\ninitGhostTrace({\n  apiKey: process.env.GHOSTTRACE_API_KEY,\n  endpoint: process.env.GHOSTTRACE_ENDPOINT || 'http://localhost:3001/v1/traces',\n  serviceName: process.env.GHOSTTRACE_SERVICE_NAME || '${projectName}',\n});`,
-                          'tracingCode'
-                        )
-                      }
-                      className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-                    >
-                      {copiedKey === 'tracingCode' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                      <span>Copy</span>
-                    </button>
-                  </div>
-                  <pre className="text-xs font-mono text-cyan-300 leading-relaxed overflow-x-auto">
+            {/* Install command */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-foreground">
+                <span className="font-semibold">Terminal Install Command:</span>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() =>
+                    copyToClipboard(
+                      'pnpm add @ghosttrace/sdk-node @ghosttrace/instrumentation-nest @ghosttrace/instrumentation-prisma',
+                      'installCmd'
+                    )
+                  }
+                  className="text-primary hover:text-primary/80"
+                >
+                  {copiedKey === 'installCmd' ? <Check className="h-3 w-3 mr-1 text-emerald-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                  <span>{copiedKey === 'installCmd' ? 'Copied' : 'Copy Command'}</span>
+                </Button>
+              </div>
+              <pre className="rounded-md border border-border bg-card p-3 text-xs font-mono text-primary select-all overflow-x-auto">
+                pnpm add @ghosttrace/sdk-node @ghosttrace/instrumentation-nest @ghosttrace/instrumentation-prisma
+              </pre>
+            </div>
+
+            {/* Code snippet tabs */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground">Application Integration Code:</span>
+                <div className="flex rounded-md border border-border bg-card p-0.5 text-xs">
+                  <button
+                    onClick={() => setSelectedSnippetTab('nest')}
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[11px] font-medium transition-colors',
+                      selectedSnippetTab === 'nest' ? 'bg-accent text-accent-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    NestJS (tracing.ts)
+                  </button>
+                  <button
+                    onClick={() => setSelectedSnippetTab('prisma')}
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[11px] font-medium transition-colors',
+                      selectedSnippetTab === 'prisma' ? 'bg-accent text-accent-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    Prisma ORM
+                  </button>
+                  <button
+                    onClick={() => setSelectedSnippetTab('express')}
+                    className={cn(
+                      'px-2 py-0.5 rounded text-[11px] font-medium transition-colors',
+                      selectedSnippetTab === 'express' ? 'bg-accent text-accent-foreground font-semibold' : 'text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    Express.js
+                  </button>
+                </div>
+              </div>
+
+              {selectedSnippetTab === 'nest' && (
+                <div className="space-y-2.5">
+                  <div className="rounded-md border border-border bg-card p-3 space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                      <span>1. Create src/tracing.ts (must initialize before any module loads):</span>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() =>
+                          copyToClipboard(
+                            `import { initGhostTrace } from '@ghosttrace/sdk-node';\n\ninitGhostTrace({\n  apiKey: process.env.GHOSTTRACE_API_KEY,\n  endpoint: process.env.GHOSTTRACE_ENDPOINT || 'http://localhost:3001/v1/traces',\n  serviceName: process.env.GHOSTTRACE_SERVICE_NAME || '${projectName}',\n});`,
+                            'tracingCode'
+                          )
+                        }
+                      >
+                        {copiedKey === 'tracingCode' ? <Check className="h-3 w-3 mr-1 text-emerald-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                        <span>Copy</span>
+                      </Button>
+                    </div>
+                    <pre className="text-xs font-mono text-primary leading-relaxed overflow-x-auto whitespace-pre-wrap">
 {`import { initGhostTrace } from '@ghosttrace/sdk-node';
 
 initGhostTrace({
@@ -440,55 +423,56 @@ initGhostTrace({
   endpoint: process.env.GHOSTTRACE_ENDPOINT || 'http://localhost:3001/v1/traces',
   serviceName: process.env.GHOSTTRACE_SERVICE_NAME || '${projectName}',
 });`}
-                  </pre>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                    <span>2. In src/main.ts (add import at line 1):</span>
+                    </pre>
                   </div>
-                  <pre className="text-xs font-mono text-emerald-300 leading-relaxed overflow-x-auto">
+
+                  <div className="rounded-md border border-border bg-card p-3 space-y-1">
+                    <div className="text-[11px] font-mono text-muted-foreground">
+                      <span>2. In src/main.ts (add at line 1):</span>
+                    </div>
+                    <pre className="text-xs font-mono text-emerald-600 dark:text-emerald-400 leading-relaxed overflow-x-auto">
 {`import 'dotenv/config';
 import './tracing'; // <-- MUST be at the very top!
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';`}
-                  </pre>
+                    </pre>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {selectedSnippetTab === 'prisma' && (
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                  <span>Attach to PrismaClient in prisma.service.ts:</span>
-                  <button
-                    onClick={() =>
-                      copyToClipboard(
-                        `import { attachGhostTracePrismaMiddleware } from '@ghosttrace/instrumentation-prisma';\n\nasync onModuleInit() {\n  await this.$connect();\n  attachGhostTracePrismaMiddleware(this);\n}`,
-                        'prismaCode'
-                      )
-                    }
-                    className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-                  >
-                    {copiedKey === 'prismaCode' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                    <span>Copy</span>
-                  </button>
-                </div>
-                <pre className="text-xs font-mono text-amber-300 leading-relaxed overflow-x-auto">
+              {selectedSnippetTab === 'prisma' && (
+                <div className="rounded-md border border-border bg-card p-3 space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-muted-foreground">
+                    <span>Attach to PrismaClient in prisma.service.ts:</span>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() =>
+                        copyToClipboard(
+                          `import { attachGhostTracePrismaMiddleware } from '@ghosttrace/instrumentation-prisma';\n\nasync onModuleInit() {\n  await this.$connect();\n  attachGhostTracePrismaMiddleware(this);\n}`,
+                          'prismaCode'
+                        )
+                      }
+                    >
+                      {copiedKey === 'prismaCode' ? <Check className="h-3 w-3 mr-1 text-emerald-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                      <span>Copy</span>
+                    </Button>
+                  </div>
+                  <pre className="text-xs font-mono text-amber-600 dark:text-amber-400 leading-relaxed overflow-x-auto whitespace-pre-wrap">
 {`import { attachGhostTracePrismaMiddleware } from '@ghosttrace/instrumentation-prisma';
 
 async onModuleInit() {
   await this.$connect();
-  // Records model, operation, SQL table & latency microsecond spans
+  // Automatically records model, operation, SQL statement & microsecond spans
   attachGhostTracePrismaMiddleware(this);
 }`}
-                </pre>
-              </div>
-            )}
+                  </pre>
+                </div>
+              )}
 
-            {selectedSnippetTab === 'express' && (
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 space-y-2">
-                <pre className="text-xs font-mono text-indigo-300 leading-relaxed overflow-x-auto">
+              {selectedSnippetTab === 'express' && (
+                <div className="rounded-md border border-border bg-card p-3">
+                  <pre className="text-xs font-mono text-indigo-600 dark:text-indigo-400 leading-relaxed overflow-x-auto whitespace-pre-wrap">
 {`import { initGhostTrace } from '@ghosttrace/sdk-node';
 import express from 'express';
 
@@ -497,194 +481,231 @@ const { tracer } = initGhostTrace({
   endpoint: 'http://localhost:3001/v1/traces',
   serviceName: '${projectName}',
 });`}
-                </pre>
-              </div>
-            )}
-          </div>
+                  </pre>
+                </div>
+              )}
+            </div>
 
-          <div className="flex justify-between pt-2">
-            <button
-              onClick={() => setActiveStep(2)}
-              className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-300 hover:text-white"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </button>
-            <button
-              onClick={() => setActiveStep(4)}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 shadow-md transition-colors"
-            >
-              <span>Continue to Step 4 (Configure API Key)</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+            <div className="flex justify-between pt-1">
+              <Button variant="outline" size="sm" onClick={() => setActiveStep(2)} className="text-xs">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                <span>Back</span>
+              </Button>
+              <Button size="sm" onClick={() => setActiveStep(4)} className="text-xs">
+                <span>Continue to Step 4</span>
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* STEP 4: CONFIGURE API KEY */}
       {activeStep === 4 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6 animate-in fade-in">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-800/50 text-amber-400">
-              <Key className="h-6 w-6" />
+        <Card className="animate-in fade-in">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                <Key className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-amber-500">Step 4 of 5</span>
+                <h3 className="text-base font-bold text-foreground">Configure Ingestion API Key in .env</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  GhostTrace uses zero-trust SHA-256 hashed keys. Place your key in server-side environment variables.
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-amber-400">Step 4 of 5</span>
-              <h3 className="text-base font-bold text-white">Configure Ingestion API Key in .env</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                GhostTrace uses zero-trust key hashing. Place your key in server-side environment variables—never commit to git.
-              </p>
-            </div>
-          </div>
 
-          {/* Copyable .env snippet */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-slate-300">
-              <span className="font-semibold">Copy to your backend .env file:</span>
-              <button
-                onClick={() =>
-                  copyToClipboard(
-                    `# GhostTrace Observability\nGHOSTTRACE_ENDPOINT="http://localhost:3001/v1/traces"\nGHOSTTRACE_API_KEY="${activeKeyString}"\nGHOSTTRACE_SERVICE_NAME="${projectName}"`,
-                    'envSnippet'
-                  )
-                }
-                className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 text-[11px]"
-              >
-                {copiedKey === 'envSnippet' ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                <span>{copiedKey === 'envSnippet' ? 'Copied .env' : 'Copy .env Configuration'}</span>
-              </button>
-            </div>
-            <pre className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-xs font-mono text-cyan-300 select-all overflow-x-auto shadow-inner leading-relaxed">
+            {/* .env snippet */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs text-foreground">
+                <span className="font-semibold">Copy to your backend .env file:</span>
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  onClick={() =>
+                    copyToClipboard(
+                      `# GhostTrace Observability\nGHOSTTRACE_ENDPOINT="http://localhost:3001/v1/traces"\nGHOSTTRACE_API_KEY="${activeKeyString}"\nGHOSTTRACE_SERVICE_NAME="${projectName}"`,
+                      'envSnippet'
+                    )
+                  }
+                >
+                  {copiedKey === 'envSnippet' ? <Check className="h-3 w-3 mr-1 text-emerald-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                  <span>Copy .env</span>
+                </Button>
+              </div>
+              <pre className="rounded-md border border-border bg-card p-3 text-xs font-mono text-foreground select-all overflow-x-auto whitespace-pre-wrap">
 {`# GhostTrace Observability
 GHOSTTRACE_ENDPOINT="http://localhost:3001/v1/traces"
 GHOSTTRACE_API_KEY="${activeKeyString}"
 GHOSTTRACE_SERVICE_NAME="${projectName}"`}
-            </pre>
-          </div>
-
-          {/* Zero-trust warning callout */}
-          <div className="rounded-xl border border-amber-800/50 bg-amber-950/20 p-4 flex items-start gap-3 text-xs text-amber-300">
-            <ShieldAlert className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <div className="font-bold">Security Best Practice</div>
-              <p className="text-amber-200/80 leading-relaxed text-[11px]">
-                Always add <code className="text-white">.env</code> to your <code className="text-white">.gitignore</code>. Ingestion keys are authenticated in constant time using SHA-256 and should only exist on your production/staging host.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-between pt-2">
-            <button
-              onClick={() => setActiveStep(3)}
-              className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-300 hover:text-white"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </button>
-            <button
-              onClick={() => setActiveStep(5)}
-              className="flex items-center gap-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-semibold text-slate-950 shadow-md transition-colors"
-            >
-              <span>Continue to Step 5 (Test Connection)</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* STEP 5: TEST CONNECTION */}
-      {activeStep === 5 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-6 space-y-6 animate-in fade-in">
-          <div className="flex items-start gap-4">
-            <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-800/50 text-emerald-400">
-              <Send className="h-6 w-6" />
-            </div>
-            <div>
-              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-emerald-400">Step 5 of 5</span>
-              <h3 className="text-base font-bold text-white">Test Connection & Verify Telemetry</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Dispatch an end-to-end OTLP telemetry probe or send a real request from your service to confirm ingestion.
-              </p>
-            </div>
-          </div>
-
-          {/* Test Probe Action Box */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950 p-6 text-center space-y-4">
-            <div className="max-w-md mx-auto space-y-2">
-              <p className="text-xs text-slate-300">
-                Click below to send an authenticated OTLP Protobuf/JSON probe to <code className="text-cyan-400 font-mono">POST /v1/traces</code> with service <code className="text-white font-mono">{projectName}</code>.
-              </p>
+              </pre>
             </div>
 
-            <button
-              onClick={handleTestConnection}
-              disabled={pingStatus === 'testing'}
-              className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 text-xs font-bold shadow-xl transition-all ${
-                pingStatus === 'success'
-                  ? 'bg-emerald-600 text-white'
-                  : pingStatus === 'failed'
-                  ? 'bg-rose-600 text-white'
-                  : 'bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white'
-              }`}
-            >
-              {pingStatus === 'testing' ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  <span>Transmitting OpenTelemetry Probe...</span>
-                </>
-              ) : pingStatus === 'success' ? (
-                <>
+            {/* Newly Created Key Alert */}
+            {createdKey && (
+              <div className="p-3.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>Connection Verified (200 OK)</span>
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  <span>Transmit Connection Test Probe</span>
-                </>
-              )}
-            </button>
-
-            {/* Success Celebration Card */}
-            {pingStatus === 'success' && (
-              <div className="rounded-xl border border-emerald-800/80 bg-emerald-950/30 p-5 text-left space-y-3 animate-in zoom-in-95">
-                <div className="flex items-center gap-2 text-emerald-300 font-bold text-sm">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                  <span>GhostTrace Ingestion Successfully Verified!</span>
+                  <span>New API Key Created: {createdKey.name}</span>
                 </div>
-                <p className="text-xs text-slate-300">
-                  Your service <strong className="text-white font-mono">{projectName}</strong> is now streaming traces, HTTP spans, and exception evidence to the platform.
+                <div className="flex items-center gap-2">
+                  <span className="flex-1 font-mono text-xs bg-card p-2 rounded border border-border truncate text-foreground select-all">
+                    {createdKey.rawApiKey}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => copyToClipboard(createdKey.rawApiKey, 'newKey')}
+                  >
+                    {copiedKey === 'newKey' ? <Check className="h-3 w-3 mr-1 text-emerald-500" /> : <Copy className="h-3 w-3 mr-1" />}
+                    <span>Copy</span>
+                  </Button>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Save this key now. For your security, the raw key secret cannot be viewed again.
                 </p>
-                {receivedTraceId && (
-                  <div className="text-[11px] font-mono text-slate-400 bg-slate-900/80 p-2.5 rounded-lg border border-slate-800 flex items-center justify-between">
-                    <span>Verified Probe Trace ID: <strong className="text-cyan-400">{receivedTraceId}</strong></span>
-                    <a
-                      href={`/projects/${projectId}/traces`}
-                      className="text-cyan-400 hover:text-cyan-300 flex items-center gap-1 font-sans font-semibold"
-                    >
-                      <span>View in Explorer</span>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  </div>
-                )}
               </div>
             )}
-          </div>
 
-          <div className="flex justify-between pt-2">
-            <button
-              onClick={() => setActiveStep(4)}
-              className="flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs text-slate-300 hover:text-white"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" /> Back
-            </button>
-            <a
-              href={`/projects/${projectId}/overview`}
-              className="flex items-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-4 py-2 text-xs font-semibold text-white shadow-md transition-colors"
-            >
-              <span>Finish & Open Dashboard</span>
-              <Check className="h-4 w-4" />
-            </a>
-          </div>
-        </div>
+            {/* Generate Key Form */}
+            <form onSubmit={handleGenerateKey} className="p-3.5 rounded-md border border-border bg-muted/20 space-y-2.5">
+              <span className="text-xs font-semibold text-foreground">Create New Ingestion API Key</span>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. production-k8s-collector"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  className="flex-1 h-8 rounded-md border border-input bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
+                />
+                <Button type="submit" disabled={isGenerating} size="sm" className="h-8 px-4 text-xs font-semibold shrink-0">
+                  <Plus className="h-3.5 w-3.5 mr-1" />
+                  <span>{isGenerating ? 'Generating...' : 'Generate Key'}</span>
+                </Button>
+              </div>
+            </form>
+
+            {/* Active Keys List */}
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-foreground">Active Ingestion Keys ({apiKeys.length})</span>
+              <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden text-xs font-mono">
+                {apiKeys.length === 0 ? (
+                  <div className="p-4 text-center text-muted-foreground">No API keys registered yet.</div>
+                ) : (
+                  apiKeys.map((k) => (
+                    <div key={k.id} className="p-2.5 flex items-center justify-between gap-3 hover:bg-muted/30">
+                      <div>
+                        <div className="font-semibold text-foreground font-sans">{k.name}</div>
+                        <div className="text-[11px] text-muted-foreground">
+                          Prefix: <strong>{k.keyPrefix}...</strong> &bull; Created: {new Date(k.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => handleRevoke(k.id)}
+                        className="text-muted-foreground hover:text-destructive p-1"
+                        title="Revoke API key"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-1">
+              <Button variant="outline" size="sm" onClick={() => setActiveStep(3)} className="text-xs">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                <span>Back</span>
+              </Button>
+              <Button size="sm" onClick={() => setActiveStep(5)} className="text-xs">
+                <span>Continue to Step 5</span>
+                <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* STEP 5: VERIFY INGESTION */}
+      {activeStep === 5 && (
+        <Card className="animate-in fade-in">
+          <CardContent className="p-5 space-y-5">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <Send className="h-5 w-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Step 5 of 5</span>
+                <h3 className="text-base font-bold text-foreground">Test Ingestion & Verify Live Stream</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Send a simulated OpenTelemetry test trace to verify network ingress and pipeline health.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-lg border border-border bg-muted/20 text-center space-y-3">
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-foreground">Pipeline Ingress Probe</h4>
+                <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                  Click the button below to dispatch a synthetic OTLP span to endpoint <code className="text-primary font-mono font-bold">http://localhost:3001/v1/traces</code>.
+                </p>
+              </div>
+
+              <Button
+                onClick={handleTestConnection}
+                disabled={pingStatus === 'testing'}
+                size="sm"
+                className="font-semibold text-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5 mr-1.5 text-amber-300" />
+                <span>{pingStatus === 'testing' ? 'Transmitting OTLP Probe...' : 'Send Test Ingestion Probe'}</span>
+              </Button>
+
+              {pingStatus === 'success' && (
+                <div className="p-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-700 dark:text-emerald-300 font-mono space-y-1">
+                  <div className="font-bold flex items-center justify-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                    <span>Ingestion Pipeline Operational! Trace Ingested Successfully.</span>
+                  </div>
+                  {receivedTraceId && (
+                    <div className="pt-1">
+                      <a
+                        href={`/projects/${projectId}/traces/${receivedTraceId}`}
+                        className="underline hover:opacity-80 inline-flex items-center gap-1 font-semibold"
+                      >
+                        <span>Open Ingested Probe Trace ({receivedTraceId.slice(0, 12)}...)</span>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {pingStatus === 'failed' && (
+                <div className="p-3 rounded-md border border-destructive/30 bg-destructive/10 text-xs text-destructive font-mono">
+                  Probe failed. Ensure the GhostTrace API collector is active on port 3001 and API key is valid.
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-between pt-1">
+              <Button variant="outline" size="sm" onClick={() => setActiveStep(4)} className="text-xs">
+                <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+                <span>Back</span>
+              </Button>
+              <Button size="sm" onClick={() => (window.location.href = `/projects/${projectId}/overview`)} className="text-xs">
+                <span>Finish & Return to Overview</span>
+                <Check className="h-3.5 w-3.5 ml-1.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

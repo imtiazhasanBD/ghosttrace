@@ -23,6 +23,10 @@ import {
   removeWorkspaceMember,
 } from '../../../../lib/api';
 import { WorkspaceMemberEntity } from '@ghosttrace/shared-types';
+import { Card, CardHeader, CardTitle, CardContent } from '../../../../components/ui/Card';
+import { Badge } from '../../../../components/ui/Badge';
+import { Button } from '../../../../components/ui/Button';
+import { cn } from '../../../../lib/utils';
 
 export default function ProjectSettingsPage() {
   const router = useRouter();
@@ -98,243 +102,207 @@ export default function ProjectSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-        <h2 className="text-base font-bold text-white flex items-center gap-2">
-          <Settings className="h-4 w-4 text-cyan-400" />
-          Project & Workspace Settings
-        </h2>
-        <p className="text-xs text-slate-400 mt-1">
-          Manage workspace membership, role-based access control (RBAC), and project identifiers
-        </p>
+      <div className="border-b border-border pb-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            <Settings className="h-4 w-4 text-primary" />
+            Project & Workspace Settings
+          </h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Manage organization access, project telemetry IDs, and team permissions
+          </p>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => router.push(`/projects/${currentProjectId}/settings/sdk`)}
+          className="text-xs self-start sm:self-auto"
+        >
+          <Key className="h-3.5 w-3.5 mr-1.5 text-primary" />
+          <span>Manage API Keys & SDK</span>
+          <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+        </Button>
       </div>
 
-      {/* Workspace & Team RBAC Management */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-          <div>
+      {/* 1. Project Identity Card */}
+      <Card>
+        <CardHeader className="border-b border-border pb-3">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Briefcase className="h-4 w-4 text-primary" />
+            Project Telemetry Metadata
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-5 space-y-3.5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase">Project Name</label>
+              <div className="h-9 px-3 rounded-md border border-input bg-muted/20 flex items-center text-xs font-medium text-foreground">
+                {currentProject?.name || 'Project'}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-muted-foreground uppercase">Workspace</label>
+              <div className="h-9 px-3 rounded-md border border-input bg-muted/20 flex items-center justify-between text-xs font-medium text-foreground">
+                <span>{currentWorkspace?.name || 'Default Workspace'}</span>
+                {currentWorkspace?.role && (
+                  <Badge variant="default" size="sm" className="font-mono uppercase">
+                    {currentWorkspace.role}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-muted-foreground uppercase">Project UUID (Telemetry Stream ID)</label>
             <div className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-cyan-400" />
-              <h3 className="text-sm font-bold text-white">
-                Workspace: {currentWorkspace?.name || 'Default Workspace'}
-              </h3>
-              {currentWorkspace?.role && (
-                <span className="rounded bg-cyan-950 px-2 py-0.5 text-[10px] font-bold text-cyan-400 uppercase tracking-wider border border-cyan-800/40">
-                  Your Role: {currentWorkspace.role}
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Slug: <span className="font-mono text-cyan-400">{currentWorkspace?.slug}</span> &bull; ID: <span className="font-mono text-slate-400">{currentWorkspace?.id}</span>
-            </p>
-          </div>
-
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <Users className="h-4 w-4 text-slate-400" />
-            <span>{members.length} Team Members</span>
-          </div>
-        </div>
-
-        {/* Invite Member Form (Only for Owner / Admin) */}
-        {isOwnerOrAdmin && (
-          <form onSubmit={handleInviteMember} className="rounded-xl border border-slate-800 bg-slate-950/60 p-4 space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
-              <UserPlus className="h-4 w-4 text-cyan-400" />
-              <span>Invite New Team Member</span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <input
-                type="email"
-                required
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="colleague@company.com"
-                className="flex-1 rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-white placeholder-slate-600 outline-none focus:border-cyan-500"
-              />
-
-              <select
-                value={inviteRole}
-                onChange={(e: any) => setInviteRole(e.target.value)}
-                className="rounded-xl border border-slate-800 bg-slate-900 px-3 py-2 text-xs font-semibold text-slate-200 outline-none focus:border-cyan-500"
-              >
-                <option value="MEMBER">Member (View & Debug Traces)</option>
-                <option value="ADMIN">Admin (Manage Projects & Keys)</option>
-              </select>
-
-              <button
-                type="submit"
-                disabled={isInviting}
-                className="rounded-xl bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white shadow-md transition-colors disabled:opacity-50 shrink-0"
-              >
-                {isInviting ? 'Inviting...' : 'Add Member'}
-              </button>
-            </div>
-
-            {inviteSuccess && (
-              <p className="text-[11px] text-emerald-400 font-medium">{inviteSuccess}</p>
-            )}
-            {inviteError && (
-              <p className="text-[11px] text-rose-400 font-medium">{inviteError}</p>
-            )}
-          </form>
-        )}
-
-        {/* Team Members List */}
-        <div className="space-y-2">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-500">
-            Active Members & Roles
-          </div>
-
-          {isLoadingMembers ? (
-            <div className="text-xs text-slate-500 font-mono py-2">Loading workspace members...</div>
-          ) : (
-            <div className="divide-y divide-slate-800/60 rounded-xl border border-slate-800 bg-slate-950/40 overflow-hidden">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between p-3.5 text-xs hover:bg-slate-900/30 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-tr from-cyan-600 to-indigo-600 text-xs font-bold text-white flex items-center justify-center shadow-sm">
-                      {member.user.name ? member.user.name.charAt(0).toUpperCase() : 'U'}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white flex items-center gap-2">
-                        <span>{member.user.name}</span>
-                        {currentUser?.id === member.userId && (
-                          <span className="text-[10px] text-cyan-400 font-normal">(You)</span>
-                        )}
-                      </div>
-                      <div className="text-[11px] font-mono text-slate-400">{member.user.email}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <span
-                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${
-                        member.role === 'OWNER'
-                          ? 'border-cyan-500/40 bg-cyan-950/60 text-cyan-300'
-                          : member.role === 'ADMIN'
-                          ? 'border-indigo-500/40 bg-indigo-950/60 text-indigo-300'
-                          : 'border-slate-700 bg-slate-900 text-slate-300'
-                      }`}
-                    >
-                      {member.role}
-                    </span>
-
-                    {isOwnerOrAdmin && member.role !== 'OWNER' && currentUser?.id !== member.userId && (
-                      <button
-                        onClick={() => handleRemoveMember(member.id, member.user.email)}
-                        className="p-1 rounded text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
-                        title="Remove member from workspace"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Project Metadata Card */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-6 space-y-4">
-        <h3 className="text-sm font-bold text-white">Project Identity</h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-sans">
-          <div className="space-y-1">
-            <span className="text-slate-500 uppercase tracking-wider text-[10px] font-semibold">
-              Project Name
-            </span>
-            <p className="font-semibold text-slate-200">{currentProject?.name || 'Demo Project'}</p>
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-slate-500 uppercase tracking-wider text-[10px] font-semibold">
-              Slug Identifier
-            </span>
-            <p className="font-mono text-cyan-400">{currentProject?.slug || 'demo-project'}</p>
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-slate-500 uppercase tracking-wider text-[10px] font-semibold">
-              Project UUID
-            </span>
-            <div className="flex items-center gap-2 font-mono text-slate-300">
-              <span className="select-all">{currentProjectId}</span>
-              <button
+              <div className="h-9 px-3 rounded-md border border-input bg-muted/20 flex-1 flex items-center font-mono text-xs text-foreground select-all overflow-hidden truncate">
+                {currentProjectId}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => copyToClipboard(currentProjectId, 'projId')}
-                className="text-slate-500 hover:text-white"
-                title="Copy Project ID"
+                className="h-9 px-3 shrink-0"
               >
                 {copiedKey === 'projId' ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                  <Check className="h-3.5 w-3.5 text-emerald-500 mr-1.5" />
                 ) : (
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-3.5 w-3.5 mr-1.5" />
                 )}
-              </button>
+                <span>{copiedKey === 'projId' ? 'Copied' : 'Copy ID'}</span>
+              </Button>
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="space-y-1">
-            <span className="text-slate-500 uppercase tracking-wider text-[10px] font-semibold">
-              Created Date
-            </span>
-            <p className="text-slate-400">
-              {currentProject?.createdAt
-                ? new Date(currentProject.createdAt).toLocaleDateString()
-                : 'Initial Setup'}
-            </p>
-          </div>
-        </div>
-      </div>
+      {/* 2. Team Members Card */}
+      <Card>
+        <CardHeader className="border-b border-border pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-500" />
+            Workspace Team Members
+          </CardTitle>
+          <span className="text-xs font-mono text-muted-foreground">
+            {members.length} {members.length === 1 ? 'member' : 'members'}
+          </span>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-5 space-y-4">
+          {/* Member Invite Form */}
+          {isOwnerOrAdmin && (
+            <form onSubmit={handleInviteMember} className="p-3.5 rounded-lg border border-border bg-muted/20 space-y-2.5">
+              <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <UserPlus className="h-3.5 w-3.5 text-primary" />
+                Add Teammate to Workspace
+              </span>
 
-      {/* Ingestion & Security Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800/50 text-cyan-400">
-              <Key className="h-4 w-4" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">SDK & API Keys</h4>
-              <p className="text-xs text-slate-400">Generate and revoke OTLP ingestion tokens</p>
-            </div>
-          </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Configure instrumentation for NestJS, Node.js, and Prisma services using cryptographic API keys.
-          </p>
-          <button
-            onClick={() => router.push(`/projects/${currentProjectId}/settings/sdk`)}
-            className="flex items-center gap-1.5 text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors"
-          >
-            <span>Manage Ingestion Keys</span>
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+              {inviteError && (
+                <div className="p-2 rounded border border-destructive/30 bg-destructive/10 text-xs text-destructive">
+                  {inviteError}
+                </div>
+              )}
+              {inviteSuccess && (
+                <div className="p-2 rounded border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-600 dark:text-emerald-400">
+                  {inviteSuccess}
+                </div>
+              )}
 
-        <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/50 text-emerald-400">
-              <Shield className="h-4 w-4" />
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">Zero-Trust Telemetry</h4>
-              <p className="text-xs text-slate-400">Security & privacy protocols</p>
-            </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="email"
+                  required
+                  placeholder="colleague@company.com"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="flex-1 h-8 rounded-md border border-input bg-card px-3 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
+                />
+
+                <select
+                  value={inviteRole}
+                  onChange={(e) => setInviteRole(e.target.value as any)}
+                  className="h-8 rounded-md border border-input bg-card px-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-ring font-mono"
+                >
+                  <option value="MEMBER">Member (Read & Ingest)</option>
+                  <option value="ADMIN">Admin (Manage Keys & Team)</option>
+                </select>
+
+                <Button
+                  type="submit"
+                  disabled={isInviting}
+                  size="sm"
+                  className="h-8 px-4 text-xs font-semibold shrink-0"
+                >
+                  {isInviting ? 'Adding...' : 'Add Member'}
+                </Button>
+              </div>
+            </form>
+          )}
+
+          {/* Members Table */}
+          <div className="rounded-md border border-border overflow-hidden">
+            {isLoadingMembers ? (
+              <div className="p-6 text-center text-xs text-muted-foreground font-mono">
+                Loading members...
+              </div>
+            ) : members.length === 0 ? (
+              <div className="p-6 text-center text-xs text-muted-foreground">
+                No team members found.
+              </div>
+            ) : (
+              <div className="divide-y divide-border">
+                {members.map((m) => {
+                  const isCurrent = currentUser?.id === m.userId;
+                  return (
+                    <div key={m.id} className="p-3 flex items-center justify-between gap-3 text-xs hover:bg-muted/30">
+                      <div className="flex items-center gap-2.5 overflow-hidden">
+                        <div className="h-7 w-7 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-xs shrink-0">
+                          {m.user?.name ? m.user.name.charAt(0).toUpperCase() : 'U'}
+                        </div>
+                        <div className="truncate">
+                          <div className="font-semibold text-foreground flex items-center gap-1.5">
+                            <span>{m.user?.name || m.user?.email || 'User'}</span>
+                            {isCurrent && (
+                              <span className="text-[10px] text-muted-foreground font-mono">(You)</span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground font-mono">{m.user?.email}</div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge
+                          variant={m.role === 'OWNER' ? 'default' : m.role === 'ADMIN' ? 'info' : 'secondary'}
+                          size="sm"
+                          className="font-mono uppercase font-bold"
+                        >
+                          {m.role}
+                        </Badge>
+
+                        {isOwnerOrAdmin && m.role !== 'OWNER' && !isCurrent && (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => handleRemoveMember(m.id, m.user?.email || 'this user')}
+                            className="text-muted-foreground hover:text-destructive p-1"
+                            title="Remove member"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Telemetry is authenticated per span via SHA-256 key hashing with automated PII redaction rules.
-          </p>
-          <div className="text-xs text-slate-500 font-mono">
-            OTLP Endpoint: <strong className="text-slate-300">/v1/traces</strong>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

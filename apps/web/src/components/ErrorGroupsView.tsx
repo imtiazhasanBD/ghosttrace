@@ -16,6 +16,10 @@ import {
   GitCompare,
   CheckCircle2,
 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/Card';
+import { Badge } from './ui/Badge';
+import { Button } from './ui/Button';
+import { cn } from '../lib/utils';
 
 interface ErrorGroupsViewProps {
   errorGroups: ErrorGroupEntity[];
@@ -57,185 +61,197 @@ export const ErrorGroupsView: React.FC<ErrorGroupsViewProps> = ({
 
   if (errorGroups.length === 0) {
     return (
-      <div className="rounded-xl border border-slate-800 bg-slate-900/30 p-12 text-center space-y-3">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-950/50 border border-emerald-800 text-emerald-400">
+      <Card className="p-12 text-center space-y-3">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 mx-auto">
           <CheckCircle2 className="h-6 w-6" />
         </div>
-        <h3 className="text-base font-bold text-white">No Grouped Exceptions Detected</h3>
-        <p className="text-xs text-slate-400 max-w-md mx-auto">
-          All monitored backend services are currently healthy. If an unhandled exception or failed span occurs, GhostTrace aggregates it by stack fingerprint here.
+        <h3 className="text-base font-bold text-foreground">No Grouped Exceptions Detected</h3>
+        <p className="text-xs text-muted-foreground max-w-md mx-auto">
+          All monitored backend services are currently healthy. If an unhandled exception or failed span occurs, GhostTrace aggregates it by cryptographic stack fingerprint here.
         </p>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header and Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-        <div>
-          <h2 className="text-base font-bold text-white flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-400" />
-            Error Groups & Exception Signatures
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Cryptographic stack-hash aggregation grouping related exceptions across distributed traces
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2.5">
-          {onOpenCompare && (
-            <button
-              onClick={onOpenCompare}
-              className="flex items-center gap-1.5 rounded-md border border-indigo-800/60 bg-indigo-950/40 hover:bg-indigo-900/50 px-3 py-1.5 text-xs font-semibold text-indigo-300 transition-colors"
-            >
-              <GitCompare className="h-3.5 w-3.5" />
-              <span>Compare Success vs Failure</span>
-            </button>
-          )}
-
-          <div className="relative w-48 sm:w-56">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
-            <input
-              type="text"
-              placeholder="Search error messages..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 rounded-md border border-slate-800 bg-slate-950 text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-cyan-500"
-            />
+      <Card>
+        <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Error Groups & Exception Signatures
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Cryptographic stack-hash aggregation grouping related exceptions across distributed traces
+            </p>
           </div>
 
-          {services.length > 1 && (
-            <select
-              aria-label="Filter errors by service"
-              value={selectedService}
-              onChange={(e) => setSelectedService(e.target.value)}
-              className="h-8 rounded-md border border-slate-800 bg-slate-900 px-2.5 text-xs text-slate-200 outline-none focus:border-cyan-500"
-            >
-              <option value="ALL">All Services</option>
-              {services.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {onOpenCompare && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onOpenCompare}
+                className="text-xs font-semibold"
+              >
+                <GitCompare className="h-3.5 w-3.5 mr-1.5 text-indigo-500" />
+                <span>Compare Traces</span>
+              </Button>
+            )}
+
+            <div className="relative w-48 sm:w-56">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search exceptions..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-card text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+
+            {services.length > 1 && (
+              <select
+                aria-label="Filter errors by service"
+                value={selectedService}
+                onChange={(e) => setSelectedService(e.target.value)}
+                className="h-8 rounded-md border border-input bg-card px-2.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
+              >
+                <option value="ALL">All Services</option>
+                {services.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Error Groups List */}
-      <div className="rounded-xl border border-slate-800 bg-slate-900/40 divide-y divide-slate-800/60 overflow-hidden">
-        {filteredGroups.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-500">
-            No error groups match the active filter criteria.
-          </div>
-        ) : (
-          filteredGroups.map((group) => {
-            const isExpanded = expandedId === group.id;
+      <Card>
+        <CardContent className="p-0 divide-y divide-border">
+          {filteredGroups.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              No error groups match the active filter criteria.
+            </div>
+          ) : (
+            filteredGroups.map((group) => {
+              const isExpanded = expandedId === group.id;
 
-            return (
-              <div key={group.id} className="transition-colors hover:bg-slate-800/20">
-                <div
-                  onClick={() => setExpandedId(isExpanded ? null : group.id)}
-                  className="flex items-center justify-between p-4 cursor-pointer text-xs"
-                >
-                  <div className="flex items-start gap-3 overflow-hidden">
-                    <span className="mt-1 text-slate-500 shrink-0">
-                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </span>
-                    <div className="space-y-1 overflow-hidden">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-rose-400 font-mono">{group.errorType}</span>
-                        <span className="rounded bg-slate-800 border border-slate-700/60 px-1.5 py-0.2 text-[10px] text-slate-300 font-mono">
-                          {group.serviceName}
-                        </span>
-                        <span className="text-[10px] text-slate-500">
-                          First seen: {new Date(group.firstSeenAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-200 font-mono truncate" title={group.message}>
-                        {group.message}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0 pl-3">
-                    <div className="text-right">
-                      <span className="rounded-full bg-rose-950/80 border border-rose-800/80 px-2.5 py-0.5 text-xs font-bold text-rose-300 font-mono">
-                        {group.count} {group.count === 1 ? 'event' : 'events'}
+              return (
+                <div key={group.id} className="transition-colors hover:bg-muted/30">
+                  <div
+                    onClick={() => setExpandedId(isExpanded ? null : group.id)}
+                    className="flex items-center justify-between p-4 cursor-pointer text-xs"
+                  >
+                    <div className="flex items-start gap-3 overflow-hidden">
+                      <span className="mt-1 text-muted-foreground shrink-0">
+                        {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                       </span>
-                      <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1 justify-end">
-                        <Clock className="h-3 w-3" />
-                        {new Date(group.lastSeenAt).toLocaleTimeString()}
-                      </p>
+                      <div className="space-y-1 overflow-hidden">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold text-rose-600 dark:text-rose-400 font-mono text-xs">
+                            {group.errorType}
+                          </span>
+                          <Badge variant="secondary" size="sm" className="font-mono">
+                            {group.serviceName}
+                          </Badge>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            First seen: {new Date(group.firstSeenAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-xs text-foreground font-mono truncate" title={group.message}>
+                          {group.message}
+                        </p>
+                      </div>
                     </div>
 
-                    {onInvestigateTraces && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onInvestigateTraces(group.serviceName, group.errorType);
-                        }}
-                        className="hidden sm:flex items-center gap-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 text-[11px] font-medium transition-colors"
-                        title="Search related traces in Explorer"
-                      >
-                        <Layers className="h-3 w-3 text-cyan-400" />
-                        <span>Traces</span>
-                      </button>
-                    )}
+                    <div className="flex items-center gap-3 shrink-0 pl-3">
+                      <div className="text-right">
+                        <Badge variant="destructive" size="sm" className="font-mono font-bold">
+                          {group.count} {group.count === 1 ? 'event' : 'events'}
+                        </Badge>
+                        <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 justify-end font-mono">
+                          <Clock className="h-3 w-3" />
+                          {new Date(group.lastSeenAt).toLocaleTimeString()}
+                        </p>
+                      </div>
+
+                      {onInvestigateTraces && (
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onInvestigateTraces(group.serviceName, group.errorType);
+                          }}
+                          className="hidden sm:flex text-[11px]"
+                          title="Search related traces in Explorer"
+                        >
+                          <Layers className="h-3 w-3 mr-1 text-primary" />
+                          <span>Traces</span>
+                        </Button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Expanded Stack & Signature Evidence */}
+                  {isExpanded && (
+                    <div className="border-t border-border bg-muted/20 p-4 space-y-3 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <Hash className="h-3.5 w-3.5 text-primary" />
+                          Stack Hash Fingerprint: <strong className="text-foreground select-all">{group.stackHash}</strong>
+                        </span>
+
+                        <div className="flex items-center gap-2">
+                          {group.sampleStackTrace && (
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              onClick={() => copyToClipboard(group.sampleStackTrace!, group.id)}
+                            >
+                              {copiedKey === group.id ? (
+                                <Check className="h-3 w-3 text-emerald-500 mr-1" />
+                              ) : (
+                                <Copy className="h-3 w-3 mr-1" />
+                              )}
+                              <span>{copiedKey === group.id ? 'Copied' : 'Copy Stack'}</span>
+                            </Button>
+                          )}
+
+                          {onInvestigateTraces && (
+                            <Button
+                              variant="default"
+                              size="xs"
+                              onClick={() => onInvestigateTraces(group.serviceName, group.errorType)}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              <span>Filter Traces for this Error</span>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {group.sampleStackTrace ? (
+                        <pre className="max-h-64 overflow-x-auto rounded-md border border-border bg-card p-3 font-mono text-[11px] text-rose-600 dark:text-rose-400 leading-relaxed whitespace-pre-wrap">
+                          {group.sampleStackTrace}
+                        </pre>
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No stack trace captured for this error group.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
-
-                {/* Expanded Stack & Signature Evidence */}
-                {isExpanded && (
-                  <div className="border-t border-slate-800/80 bg-slate-950/70 p-4 space-y-3 text-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-slate-400">
-                      <span className="flex items-center gap-1.5">
-                        <Hash className="h-3.5 w-3.5 text-cyan-400" />
-                        Stack Hash Fingerprint: <strong className="text-slate-200 select-all">{group.stackHash}</strong>
-                      </span>
-
-                      <div className="flex items-center gap-2">
-                        {group.sampleStackTrace && (
-                          <button
-                            onClick={() => copyToClipboard(group.sampleStackTrace!, group.id)}
-                            className="flex items-center gap-1 rounded bg-slate-800 px-2.5 py-1 text-slate-300 hover:text-white transition-colors"
-                          >
-                            {copiedKey === group.id ? (
-                              <Check className="h-3 w-3 text-emerald-400" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                            <span>{copiedKey === group.id ? 'Copied' : 'Copy Stack'}</span>
-                          </button>
-                        )}
-
-                        {onInvestigateTraces && (
-                          <button
-                            onClick={() => onInvestigateTraces(group.serviceName, group.errorType)}
-                            className="flex items-center gap-1 rounded bg-cyan-950/50 border border-cyan-800/60 px-2.5 py-1 text-cyan-300 hover:bg-cyan-900/50 transition-colors"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            <span>Filter Traces for this Error</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {group.sampleStackTrace ? (
-                      <pre className="max-h-64 overflow-x-auto rounded-lg border border-slate-800 bg-slate-950 p-3 font-mono text-[11px] text-rose-300/90 leading-relaxed">
-                        {group.sampleStackTrace}
-                      </pre>
-                    ) : (
-                      <p className="text-xs text-slate-500 italic">No stack trace captured for this error group.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        )}
-      </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
