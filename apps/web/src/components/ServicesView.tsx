@@ -53,36 +53,39 @@ export const ServicesView: React.FC<ServicesViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header banner */}
-      <Card>
-        <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3.5">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
               <Server className="h-4 w-4 text-primary" />
               Monitored Services & System Topography
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Active microservices reporting distributed telemetry and OpenTelemetry instrumentation
-            </p>
+            </h1>
+            <Badge variant="default" size="sm" className="font-mono">
+              {filteredStats.length} {filteredStats.length === 1 ? 'Service' : 'Services'}
+            </Badge>
           </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Active microservices reporting distributed telemetry and OpenTelemetry instrumentation
+          </p>
+        </div>
 
-          <div className="relative w-full sm:w-60">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Filter services..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-card text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
-        </CardContent>
-      </Card>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search services..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-card text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+      </div>
 
       {/* Services Grid */}
       {filteredStats.length === 0 ? (
         <Card className="p-12 text-center space-y-3">
-          <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground mx-auto">
+          <div className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground mx-auto">
             <Server className="h-5 w-5" />
           </div>
           <p className="text-sm font-semibold text-foreground">No Services Detected</p>

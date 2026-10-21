@@ -92,9 +92,9 @@ export default function TracesPage() {
   };
 
   const getDurationColor = (ms: number) => {
-    if (ms < 200) return 'text-emerald-600 dark:text-emerald-400';
-    if (ms < 800) return 'text-amber-600 dark:text-amber-400';
-    return 'text-rose-600 dark:text-rose-400';
+    if (ms < 100) return 'text-emerald-500 font-semibold';
+    if (ms < 500) return 'text-amber-500 font-semibold';
+    return 'text-rose-500 font-semibold';
   };
 
   const allServices = metrics?.services || [];
@@ -293,14 +293,18 @@ export default function TracesPage() {
                       <tr
                         key={t.id}
                         onClick={() => router.push(`/projects/${currentProjectId}/traces/${t.id}`)}
-                        className="group hover:bg-muted/40 cursor-pointer transition-colors"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') router.push(`/projects/${currentProjectId}/traces/${t.id}`);
+                        }}
+                        tabIndex={0}
+                        className="group hover:bg-muted/40 cursor-pointer transition-colors focus-visible:outline-none focus-visible:bg-muted/50"
                       >
                         {/* Status Icon */}
                         <td className="py-2.5 px-3.5 text-center">
                           {isError ? (
-                            <AlertCircle className="h-4 w-4 text-rose-600 dark:text-rose-400 inline" />
+                            <AlertCircle className="h-4 w-4 text-rose-500 inline" />
                           ) : (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 inline" />
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500 inline" />
                           )}
                         </td>
 
@@ -316,31 +320,32 @@ export default function TracesPage() {
 
                         {/* Trace ID with copy button */}
                         <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
-                          <div className="flex items-center gap-1.5">
-                            <span className="truncate max-w-[85px]" title={t.id}>
-                              {t.id.slice(0, 8)}...
-                            </span>
-                            <button
-                              type="button"
-                              onClick={(e) => copyToClipboard(t.id, e)}
-                              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                              title={copiedTraceId === t.id ? 'Copied!' : 'Copy trace ID'}
-                              aria-label="Copy trace ID"
-                            >
-                              {copiedTraceId === t.id ? (
+                          <button
+                            type="button"
+                            onClick={(e) => copyToClipboard(t.id, e)}
+                            className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[11px] font-mono bg-muted/60 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                            title={copiedTraceId === t.id ? 'Copied!' : `Copy Trace ID (${t.id})`}
+                            aria-label="Copy trace ID"
+                          >
+                            {copiedTraceId === t.id ? (
+                              <>
                                 <Check className="h-3 w-3 text-emerald-500" />
-                              ) : (
-                                <Copy className="h-3 w-3" />
-                              )}
-                            </button>
-                          </div>
+                                <span className="text-emerald-500 font-semibold text-[10px]">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3 w-3 opacity-60" />
+                                <span>{t.id.slice(0, 8)}...</span>
+                              </>
+                            )}
+                          </button>
                         </td>
 
                         {/* Service name */}
-                        <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground truncate">
-                          <Badge variant="secondary" size="sm" className="font-mono truncate max-w-[120px]">
+                        <td className="py-2.5 px-3 font-mono text-[11px]">
+                          <span className="px-1.5 py-0.5 rounded bg-muted/40 border border-border/50 text-foreground/80 font-mono text-[11px] truncate max-w-[120px] inline-block">
                             {t.serviceName}
-                          </Badge>
+                          </span>
                         </td>
 
                         {/* Duration */}

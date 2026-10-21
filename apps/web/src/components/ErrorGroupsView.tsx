@@ -75,59 +75,67 @@ export const ErrorGroupsView: React.FC<ErrorGroupsViewProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header and Filter Toolbar */}
-      <Card>
-        <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-3.5">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-rose-500" />
               Error Groups & Exception Signatures
-            </h2>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Cryptographic stack-hash aggregation grouping related exceptions across distributed traces
-            </p>
+            </h1>
+            <Badge variant="destructive" size="sm" className="font-mono">
+              {filteredGroups.length} {filteredGroups.length === 1 ? 'Group' : 'Groups'}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Cryptographic stack-hash aggregation grouping related exceptions across distributed traces
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {onOpenCompare && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenCompare}
+              className="text-xs font-semibold"
+            >
+              <GitCompare className="h-3.5 w-3.5 mr-1.5 text-indigo-500" />
+              <span>Compare Traces</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Filter and Search Bar */}
+      <Card>
+        <CardContent className="p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search exceptions by type, message, or service..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-card text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
+            />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {onOpenCompare && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onOpenCompare}
-                className="text-xs font-semibold"
-              >
-                <GitCompare className="h-3.5 w-3.5 mr-1.5 text-indigo-500" />
-                <span>Compare Traces</span>
-              </Button>
-            )}
-
-            <div className="relative w-48 sm:w-56">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search exceptions..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full h-8 pl-8 pr-3 rounded-md border border-input bg-card text-xs text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-
-            {services.length > 1 && (
-              <select
-                aria-label="Filter errors by service"
-                value={selectedService}
-                onChange={(e) => setSelectedService(e.target.value)}
-                className="h-8 rounded-md border border-input bg-card px-2.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
-              >
-                <option value="ALL">All Services</option>
-                {services.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {services.length > 0 && (
+            <select
+              aria-label="Filter errors by service"
+              value={selectedService}
+              onChange={(e) => setSelectedService(e.target.value)}
+              className="h-8 rounded-md border border-input bg-card px-2.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-ring font-mono"
+            >
+              <option value="ALL">All Services</option>
+              {services.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          )}
         </CardContent>
       </Card>
 
@@ -145,8 +153,16 @@ export const ErrorGroupsView: React.FC<ErrorGroupsViewProps> = ({
               return (
                 <div key={group.id} className="transition-colors hover:bg-muted/30">
                   <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => setExpandedId(isExpanded ? null : group.id)}
-                    className="flex items-center justify-between p-4 cursor-pointer text-xs"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        setExpandedId(isExpanded ? null : group.id);
+                      }
+                    }}
+                    className="flex items-center justify-between p-4 cursor-pointer text-xs outline-none focus-visible:bg-muted/50"
                   >
                     <div className="flex items-start gap-3 overflow-hidden">
                       <span className="mt-1 text-muted-foreground shrink-0">

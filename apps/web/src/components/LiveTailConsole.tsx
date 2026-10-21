@@ -130,7 +130,7 @@ export const LiveTailConsole: React.FC<LiveTailConsoleProps> = ({ projectId, ser
   });
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden shadow-sm">
+    <div className="rounded-md border border-border bg-card overflow-hidden shadow-xs">
       {/* Top Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 border-b border-border bg-muted/30">
         <div className="flex items-center gap-2 flex-wrap">
@@ -305,12 +305,12 @@ export const LiveTailConsole: React.FC<LiveTailConsoleProps> = ({ projectId, ser
                   {evt.data.durationMs !== undefined && (
                     <span
                       className={cn(
-                        'text-[11px] px-1.5 py-0.2 rounded font-bold border',
-                        evt.data.durationMs > 200
+                        'text-[11px] px-1.5 py-0.5 rounded-md font-bold font-mono border',
+                        evt.data.durationMs >= 500
                           ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
-                          : evt.data.durationMs > 50
+                          : evt.data.durationMs >= 100
                           ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400'
-                          : 'bg-muted border-border text-muted-foreground'
+                          : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                       )}
                     >
                       {evt.data.durationMs}ms
@@ -352,7 +352,7 @@ export const LiveTailConsole: React.FC<LiveTailConsoleProps> = ({ projectId, ser
                 <div className="shrink-0">
                   <Link
                     href={`/projects/${projectId}/traces/${evt.data.traceId}`}
-                    className="inline-flex items-center gap-1 rounded border border-border bg-card hover:bg-accent px-2 py-0.5 text-[11px] text-foreground transition-colors"
+                    className="inline-flex items-center gap-1 rounded-md border border-border bg-card hover:bg-accent px-2 py-0.5 text-[11px] text-foreground transition-colors"
                     title="Open Trace Waterfall"
                   >
                     <span>Trace</span>

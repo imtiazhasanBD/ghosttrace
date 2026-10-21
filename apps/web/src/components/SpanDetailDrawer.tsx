@@ -141,7 +141,7 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
 
         {/* Database Query Special Callout */}
         {isDb && dbInfo && (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 font-sans">
                 <Database className="h-3.5 w-3.5" />
@@ -192,7 +192,7 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
 
         {/* Stack Trace / Exception Box */}
         {isError && stackTrace && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3.5 space-y-2">
+          <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3.5 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-destructive flex items-center gap-1.5 font-sans">
                 <AlertOctagon className="h-3.5 w-3.5" />
@@ -225,12 +225,12 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
                 placeholder="Filter attributes..."
                 value={attrSearch}
                 onChange={(e) => setAttrSearch(e.target.value)}
-                className="w-full h-6 pl-6 pr-2 rounded border border-input bg-card text-[11px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-1 focus:ring-ring"
+                className="w-full h-6 pl-6 pr-2 rounded-md border border-input bg-card text-[11px] text-foreground placeholder:text-muted-foreground/60 outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-card divide-y divide-border overflow-hidden">
+          <div className="rounded-md border border-border bg-card divide-y divide-border overflow-hidden">
             {filteredAttributes.length === 0 ? (
               <div className="p-4 text-center text-xs text-muted-foreground font-sans">
                 No matching attributes found.

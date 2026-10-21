@@ -164,7 +164,7 @@ export default function SlowQueryAnalyzerPage() {
                   key={preset}
                   onClick={() => setThresholdMs(preset)}
                   className={cn(
-                    'px-2 py-0.5 rounded text-[11px] font-mono transition-colors border',
+                    'px-2 py-0.5 rounded-md text-[11px] font-mono transition-colors border',
                     thresholdMs === preset
                       ? 'bg-primary text-primary-foreground font-bold border-primary shadow-xs'
                       : 'border-border bg-card text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -352,7 +352,7 @@ export default function SlowQueryAnalyzerPage() {
                         )}
 
                         {/* Technology Tag */}
-                        <span className="rounded bg-muted px-1.5 py-0.2 text-[10px] font-mono text-muted-foreground border border-border">
+                        <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-mono text-muted-foreground border border-border">
                           {isRawSql ? 'Raw SQL' : 'Prisma ORM'}
                         </span>
 
@@ -380,9 +380,11 @@ export default function SlowQueryAnalyzerPage() {
                     <div
                       className={cn(
                         'flex items-center gap-1.5 px-2.5 py-1 rounded-md border font-mono text-xs font-bold',
-                        isExtreme
+                        query.durationMs >= 500
                           ? 'bg-rose-500/15 border-rose-500/30 text-rose-600 dark:text-rose-400'
-                          : 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                          : query.durationMs >= 100
+                          ? 'bg-amber-500/15 border-amber-500/30 text-amber-600 dark:text-amber-400'
+                          : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
                       )}
                     >
                       <Clock className="h-3.5 w-3.5" />
@@ -412,7 +414,7 @@ export default function SlowQueryAnalyzerPage() {
                     {query.statement && (
                       <button
                         onClick={() => copyToClipboard(query.formattedStatement || query.statement || '', query.id)}
-                        className="flex items-center gap-1 rounded bg-card hover:bg-accent text-foreground px-2 py-0.5 border border-border text-[11px] transition-colors"
+                        className="flex items-center gap-1 rounded-md bg-card hover:bg-accent text-foreground px-2 py-0.5 border border-border text-[11px] transition-colors"
                       >
                         {copiedSpanId === query.id ? (
                           <>

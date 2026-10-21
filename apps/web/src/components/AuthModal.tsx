@@ -61,7 +61,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4 animate-in fade-in">
-      <div className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-2xl relative space-y-4">
+      <div className="w-full max-w-md rounded-md border border-border bg-card p-6 shadow-2xl relative space-y-4">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -112,7 +112,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
               setError(null);
             }}
             className={cn(
-              'flex-1 rounded py-1 font-medium transition-colors',
+              'flex-1 rounded-md py-1 font-medium transition-colors',
               tab === 'login'
                 ? 'bg-card text-foreground font-semibold shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
@@ -127,7 +127,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuthSuc
               setError(null);
             }}
             className={cn(
-              'flex-1 rounded py-1 font-medium transition-colors',
+              'flex-1 rounded-md py-1 font-medium transition-colors',
               tab === 'register'
                 ? 'bg-card text-foreground font-semibold shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'

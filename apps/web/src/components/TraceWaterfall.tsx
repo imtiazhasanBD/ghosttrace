@@ -205,13 +205,13 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
   }
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden flex flex-col shadow-sm">
+    <div className="rounded-md border border-border bg-card overflow-hidden flex flex-col shadow-xs">
       {/* 1. Trace Header Summary Banner */}
       <div className="border-b border-border bg-muted/30 px-5 py-3.5 flex flex-wrap items-center justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-semibold text-muted-foreground">Trace:</span>
-            <span className="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded border border-border select-all">
+            <span className="font-mono text-xs font-bold text-foreground bg-muted px-2 py-0.5 rounded-md border border-border select-all">
               {trace.id}
             </span>
             <button

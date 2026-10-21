@@ -156,7 +156,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
   ];
 
   return (
-    <div className="space-y-5 max-w-4xl mx-auto">
+    <div className="space-y-5 max-w-6xl mx-auto">
       {/* 5-Step Process Bar */}
       <Card>
         <CardContent className="p-3">
@@ -205,7 +205,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         <Card className="animate-in fade-in">
           <CardContent className="p-5 space-y-5">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <div className="p-2.5 rounded-md bg-primary/10 text-primary border border-primary/20">
                 <User className="h-5 w-5" />
               </div>
               <div>
@@ -218,7 +218,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
+              <div className="rounded-md border border-border bg-muted/20 p-3.5 space-y-1.5">
                 <span className="text-xs font-semibold text-muted-foreground uppercase">Active User Account</span>
                 <div className="flex items-center gap-2.5 pt-1">
                   <div className="h-7 w-7 rounded-full bg-primary/20 text-primary border border-primary/30 font-bold flex items-center justify-center text-xs">
@@ -231,7 +231,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
+              <div className="rounded-md border border-border bg-muted/20 p-3.5 space-y-1.5">
                 <span className="text-xs font-semibold text-muted-foreground uppercase">Active Workspace</span>
                 <div className="flex items-center gap-2 pt-1">
                   <Badge variant="default" size="sm" className="font-mono font-bold">
@@ -257,7 +257,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         <Card className="animate-in fade-in">
           <CardContent className="p-5 space-y-5">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+              <div className="p-2.5 rounded-md bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
                 <FolderGit2 className="h-5 w-5" />
               </div>
               <div>
@@ -325,7 +325,7 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
         <Card className="animate-in fade-in">
           <CardContent className="p-5 space-y-5">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <div className="p-2.5 rounded-md bg-primary/10 text-primary border border-primary/20">
                 <Terminal className="h-5 w-5" />
               </div>
               <div>
@@ -505,7 +505,7 @@ const { tracer } = initGhostTrace({
         <Card className="animate-in fade-in">
           <CardContent className="p-5 space-y-5">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-500 border border-amber-500/20">
+              <div className="p-2.5 rounded-md bg-amber-500/10 text-amber-500 border border-amber-500/20">
                 <Key className="h-5 w-5" />
               </div>
               <div>
@@ -637,7 +637,7 @@ GHOSTTRACE_SERVICE_NAME="${projectName}"`}
         <Card className="animate-in fade-in">
           <CardContent className="p-5 space-y-5">
             <div className="flex items-start gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <div className="p-2.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <Send className="h-5 w-5" />
               </div>
               <div>
@@ -649,7 +649,7 @@ GHOSTTRACE_SERVICE_NAME="${projectName}"`}
               </div>
             </div>
 
-            <div className="p-4 rounded-lg border border-border bg-muted/20 text-center space-y-3">
+            <div className="p-4 rounded-md border border-border bg-muted/20 text-center space-y-3">
               <div className="space-y-1">
                 <h4 className="text-sm font-bold text-foreground">Pipeline Ingress Probe</h4>
                 <p className="text-xs text-muted-foreground max-w-md mx-auto">

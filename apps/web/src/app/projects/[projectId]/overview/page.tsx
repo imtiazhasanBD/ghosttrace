@@ -19,6 +19,8 @@ import {
   TrendingDown,
   Layers,
   ChevronDown,
+  Copy,
+  Check,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -152,6 +154,16 @@ export default function OverviewPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [serviceFilter, setServiceFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'OK' | 'ERROR'>('ALL');
+  const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopiedTraceId(text);
+    setTimeout(() => {
+      setCopiedTraceId(null);
+    }, 2000);
+  };
 
   // Computed summary metrics
   const totalTracesCount = metrics?.totalTraces ?? traces.length ?? 0;
@@ -467,7 +479,7 @@ export default function OverviewPage() {
 
           <div className="h-60 w-full pt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={requestVolumeData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
+              <BarChart data={requestVolumeData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.9} />
@@ -482,20 +494,22 @@ export default function OverviewPage() {
                   tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 />
                 <YAxis
-                  width={32}
+                  width={34}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 />
                 <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted) / 0.25)' }}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-lg border border-border bg-popover p-2 shadow-lg text-xs">
-                          <p className="font-semibold text-foreground">{payload[0].payload.time}</p>
-                          <p className="text-sky-500 font-mono mt-0.5">
-                            {payload[0].value} requests
-                          </p>
+                        <div className="rounded-md border border-border bg-popover/95 backdrop-blur-sm p-2.5 shadow-md text-xs space-y-1">
+                          <p className="font-semibold text-foreground font-mono">{payload[0].payload.time}</p>
+                          <div className="flex items-center gap-1.5 text-sky-500 font-mono">
+                            <span className="h-2 w-2 rounded-full bg-sky-500" />
+                            <span>{payload[0].value} traces</span>
+                          </div>
                         </div>
                       );
                     }
@@ -539,7 +553,7 @@ export default function OverviewPage() {
 
           <div className="h-60 w-full pt-3">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={latencyPercentilesData} margin={{ top: 10, right: 10, left: -5, bottom: 0 }}>
+              <LineChart data={latencyPercentilesData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
                 <XAxis
                   dataKey="time"
@@ -548,7 +562,7 @@ export default function OverviewPage() {
                   tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
                 />
                 <YAxis
-                  width={48}
+                  width={56}
                   axisLine={false}
                   tickLine={false}
                   tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
@@ -558,11 +572,28 @@ export default function OverviewPage() {
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
                       return (
-                        <div className="rounded-lg border border-border bg-popover p-2 shadow-lg text-xs space-y-1">
-                          <p className="font-semibold text-foreground">{payload[0].payload.time}</p>
-                          <p className="text-sky-400 font-mono">p50: {payload[0].value} ms</p>
-                          <p className="text-purple-400 font-mono">p95: {payload[1].value} ms</p>
-                          <p className="text-pink-400 font-mono">p99: {payload[2].value} ms</p>
+                        <div className="rounded-md border border-border bg-popover/95 backdrop-blur-sm p-2.5 shadow-md text-xs space-y-1.5">
+                          <p className="font-semibold text-foreground font-mono">{payload[0]?.payload?.time}</p>
+                          <div className="space-y-1 font-mono text-[11px]">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-sky-400">
+                                <span className="h-2 w-2 rounded-full bg-sky-400" /> p50
+                              </span>
+                              <span className="font-bold text-foreground">{payload[0]?.value} ms</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-purple-400">
+                                <span className="h-2 w-2 rounded-full bg-purple-400" /> p95
+                              </span>
+                              <span className="font-bold text-foreground">{payload[1]?.value} ms</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="flex items-center gap-1.5 text-pink-400">
+                                <span className="h-2 w-2 rounded-full bg-pink-400" /> p99
+                              </span>
+                              <span className="font-bold text-foreground">{payload[2]?.value} ms</span>
+                            </div>
+                          </div>
                         </div>
                       );
                     }
@@ -743,25 +774,54 @@ export default function OverviewPage() {
                     <tr
                       key={trace.id}
                       onClick={() => router.push(`/projects/${currentProjectId}/traces/${trace.id}`)}
-                      className="hover:bg-muted/30 cursor-pointer transition-colors group"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') router.push(`/projects/${currentProjectId}/traces/${trace.id}`);
+                      }}
+                      tabIndex={0}
+                      className="hover:bg-muted/40 cursor-pointer transition-colors group focus-visible:outline-none focus-visible:bg-muted/50"
                     >
                       <td className="py-2.5 px-4">
-                        {isOk ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                        ) : (
-                          <AlertCircle className="h-4 w-4 text-rose-500" />
-                        )}
+                        <div title={isOk ? 'Status: 200 OK' : 'Status: ERROR'}>
+                          {isOk ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-rose-500" />
+                          )}
+                        </div>
                       </td>
                       <td className="py-2.5 px-4 font-semibold text-foreground">
-                        {trace.rootSpanName}
+                        <div className="flex items-center gap-2 max-w-md">
+                          <span className="truncate">{trace.rootSpanName}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => copyToClipboard(trace.id, e)}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono bg-muted/60 hover:bg-accent text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                            title={copiedTraceId === trace.id ? 'Copied Trace ID!' : `Copy Trace ID (${trace.id.slice(0, 8)}...)`}
+                            aria-label="Copy trace ID"
+                          >
+                            {copiedTraceId === trace.id ? (
+                              <>
+                                <Check className="h-2.5 w-2.5 text-emerald-500" />
+                                <span className="text-emerald-500 font-semibold text-[9px]">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-2.5 w-2.5 opacity-60" />
+                                <span className="text-[9px]">{trace.id.slice(0, 6)}</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </td>
-                      <td className="py-2.5 px-4 text-muted-foreground font-normal">
-                        {trace.serviceName}
+                      <td className="py-2.5 px-4 font-mono text-[11px] text-muted-foreground">
+                        <span className="px-1.5 py-0.5 rounded bg-muted/40 border border-border/50 text-foreground/80">
+                          {trace.serviceName}
+                        </span>
                       </td>
-                      <td className={cn('py-2.5 px-4', getDurationColor(trace.durationMs))}>
+                      <td className={cn('py-2.5 px-4 font-mono font-semibold', getDurationColor(trace.durationMs))}>
                         {trace.durationMs.toFixed(1)} ms
                       </td>
-                      <td className="py-2.5 px-4 text-right text-muted-foreground">
+                      <td className="py-2.5 px-4 text-right text-muted-foreground font-mono text-[11px]">
                         {formatTimestamp(trace.createdAt)}
                       </td>
                       <td className="py-2.5 px-4 text-right text-muted-foreground group-hover:text-foreground">

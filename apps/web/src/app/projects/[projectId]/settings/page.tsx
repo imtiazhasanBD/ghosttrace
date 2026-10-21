@@ -102,7 +102,7 @@ export default function ProjectSettingsPage() {
   };
 
   return (
-    <div className="space-y-5 max-w-5xl mx-auto">
+    <div className="space-y-5 max-w-6xl mx-auto">
       {/* Header */}
       <div className="border-b border-border pb-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -195,19 +195,19 @@ export default function ProjectSettingsPage() {
         <CardContent className="p-4 sm:p-5 space-y-4">
           {/* Member Invite Form */}
           {isOwnerOrAdmin && (
-            <form onSubmit={handleInviteMember} className="p-3.5 rounded-lg border border-border bg-muted/20 space-y-2.5">
+            <form onSubmit={handleInviteMember} className="p-3.5 rounded-md border border-border bg-muted/20 space-y-2.5">
               <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                 <UserPlus className="h-3.5 w-3.5 text-primary" />
                 Add Teammate to Workspace
               </span>
 
               {inviteError && (
-                <div className="p-2 rounded border border-destructive/30 bg-destructive/10 text-xs text-destructive">
+                <div className="p-2 rounded-md border border-destructive/30 bg-destructive/10 text-xs text-destructive">
                   {inviteError}
                 </div>
               )}
               {inviteSuccess && (
-                <div className="p-2 rounded border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-600 dark:text-emerald-400">
+                <div className="p-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-600 dark:text-emerald-400">
                   {inviteSuccess}
                 </div>
               )}
