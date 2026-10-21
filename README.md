@@ -98,12 +98,21 @@ curl -X POST http://localhost:3002/checkout/failure \
 ```
 *Result*: Returns HTTP 409 Conflict. Records `InventoryDepletionError` with full stack trace, error group hash, and Prisma database state.
 
-### 3. Inspect in Dashboard
+### 3. Trigger Slow Database Query (Performance Forensics)
+```bash
+curl -X POST http://localhost:3002/checkout/slow \
+  -H "Content-Type: application/json" \
+  -d '{"email": "performance@ghosttrace.io", "sku": "PROD-SUCCESS-1"}'
+```
+*Result*: Simulates an unindexed database query (~120ms) and records span with execution duration.
+
+### 4. Inspect in Dashboard
 Open [http://localhost:3000](http://localhost:3000):
-1. **Traces**: View the live stream of traces updating via auto-polling.
+1. **Traces & Live Tail**: Toggle **Live Tail** to stream incoming traces and exceptions in real-time via Server-Sent Events (SSE) with pause/resume, auto-scroll, and error filters.
 2. **Waterfall**: Click on the failing trace to inspect the exact parent-child hierarchy down to the failing Prisma inventory check.
-3. **Span Detail Drawer**: Click the red error span to view the formatted stack trace and attributes.
-4. **Compare Traces**: Select the success trace as Baseline and the failed trace as Target to see the side-by-side differential analysis.
+3. **Slow Queries**: Inspect database queries exceeding the configurable threshold (25ms, 50ms, 100ms, 250ms), sort by latency, inspect formatted SQL, and navigate directly to the trace.
+4. **Span Detail Drawer**: Click any database span to view the formatted SQL or Prisma ORM call and attributes.
+5. **Compare Traces**: Select the success trace as Baseline and the failed trace as Target to see the side-by-side differential analysis.
 
 ---
 

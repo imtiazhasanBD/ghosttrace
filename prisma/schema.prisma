@@ -135,6 +135,7 @@ model Span {
   @@index([traceId, startTimeUnixNano(sort: Asc)])
   @@index([projectId, errorGroupHash])
   @@index([parentSpanId])
+  @@index([projectId, durationMs])
   @@map("spans")
 }
 

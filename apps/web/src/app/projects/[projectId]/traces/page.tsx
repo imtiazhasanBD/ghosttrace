@@ -10,10 +10,12 @@ import {
   ArrowRight,
   Clock,
   Layers,
+  Radio,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../../../../lib/ProjectTelemetryContext';
 import { fetchTraces } from '../../../../lib/api';
 import { TraceEntity } from '@ghosttrace/shared-types';
+import { LiveTailConsole } from '../../../../components/LiveTailConsole';
 
 export default function TracesPage() {
   const router = useRouter();
@@ -24,6 +26,9 @@ export default function TracesPage() {
   const initialService = searchParams.get('service') || 'ALL';
   const initialStatus = searchParams.get('status') || 'ALL';
   const initialSearch = searchParams.get('search') || '';
+  const initialLive = searchParams.get('live') === 'true';
+
+  const [showLiveTail, setShowLiveTail] = useState<boolean>(initialLive);
 
   const [serviceFilter, setServiceFilter] = useState<string>(initialService);
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
@@ -157,8 +162,32 @@ export default function TracesPage() {
               <option value="SLOW">&gt; 1000 ms</option>
             </select>
           </div>
+
+          {/* Live Tail Toggle Button */}
+          <button
+            onClick={() => setShowLiveTail(!showLiveTail)}
+            className={`flex items-center gap-1.5 h-8 px-3 rounded-md border text-xs font-semibold transition-colors ${
+              showLiveTail
+                ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-sm shadow-cyan-500/20'
+                : 'border-slate-800 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800'
+            }`}
+            title="Toggle Live Telemetry Tail streaming"
+          >
+            <Radio className={`h-3.5 w-3.5 ${showLiveTail ? 'text-cyan-400 animate-pulse' : 'text-slate-400'}`} />
+            <span>Live Tail</span>
+            {showLiveTail && (
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-ping ml-0.5" />
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Real-Time Live Tail Streaming Console */}
+      {showLiveTail && currentProjectId && (
+        <div className="animate-in fade-in duration-200">
+          <LiveTailConsole projectId={currentProjectId} services={allServices} />
+        </div>
+      )}
 
       {/* Traces Count & Table */}
       <div className="flex items-center justify-between text-xs text-slate-400 px-1">

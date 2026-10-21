@@ -366,6 +366,16 @@ export const TraceWaterfall: React.FC<TraceWaterfallProps> = ({
                   </span>
                 )}
 
+                {/* Slow DB Query Alert Tag */}
+                {meta.label === 'DATABASE' && span.durationMs >= 50 && (
+                  <span
+                    className="rounded bg-amber-950/80 px-1.5 py-0.2 text-[9px] font-mono font-bold text-amber-300 border border-amber-800/80 shrink-0"
+                    title={`Slow database query: ${span.durationMs.toFixed(1)}ms`}
+                  >
+                    Slow Query
+                  </span>
+                )}
+
                 {/* Duration */}
                 <span className="ml-auto text-[11px] font-mono text-slate-400 shrink-0 pl-1">
                   {span.durationMs.toFixed(1)}ms

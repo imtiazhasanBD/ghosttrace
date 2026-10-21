@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { SpanEntity } from '@ghosttrace/shared-types';
+import { SpanEntity, isDatabaseSpan, parseDatabaseSpanInfo } from '@ghosttrace/shared-types';
 import {
   X,
   Copy,
@@ -46,6 +46,10 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
   };
 
   const isError = span.statusCode === 'ERROR';
+  const isDb = isDatabaseSpan(span);
+  const dbInfo = isDb ? parseDatabaseSpanInfo(span) : null;
+  const isSlowDb = isDb && span.durationMs >= 50;
+
   const exceptionEvent = span.events?.find((e) => e.name === 'exception');
   const stackTrace = exceptionEvent?.attributes?.['exception.stacktrace'] || span.statusMessage;
 
@@ -66,10 +70,18 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
             className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
               isError
                 ? 'border-rose-500/30 bg-rose-950/40 text-rose-400'
-                : 'border-cyan-500/30 bg-cyan-950/40 text-cyan-400'
+                : isDb
+                ? 'border-cyan-500/30 bg-cyan-950/40 text-cyan-400'
+                : 'border-indigo-500/30 bg-indigo-950/40 text-indigo-400'
             }`}
           >
-            {isError ? <AlertOctagon className="h-4 w-4" /> : <Terminal className="h-4 w-4" />}
+            {isError ? (
+              <AlertOctagon className="h-4 w-4" />
+            ) : isDb ? (
+              <Database className="h-4 w-4" />
+            ) : (
+              <Terminal className="h-4 w-4" />
+            )}
           </div>
           <div className="overflow-hidden">
             <h3 className="text-sm font-bold text-white truncate" title={span.name}>
@@ -126,6 +138,69 @@ export const SpanDetailDrawer: React.FC<SpanDetailDrawerProps> = ({ span, onClos
             </div>
           </div>
         </div>
+
+        {/* Database Query Forensics Card */}
+        {isDb && dbInfo && (
+          <div
+            className={`rounded-xl border p-4 space-y-3 ${
+              isSlowDb
+                ? 'border-amber-800/60 bg-amber-950/20'
+                : 'border-slate-800 bg-slate-900/40'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Database className="h-4 w-4 text-cyan-400" />
+                <span className="text-xs font-semibold text-white">Database Query Forensics</span>
+                {isSlowDb && (
+                  <span className="rounded bg-amber-950/80 px-2 py-0.5 text-[10px] font-bold text-amber-400 border border-amber-800">
+                    Slow Query (≥50ms)
+                  </span>
+                )}
+              </div>
+
+              <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">
+                {dbInfo.isRawSql ? 'Raw SQL' : 'Prisma ORM'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {dbInfo.operation && (
+                <span className="rounded bg-cyan-950/70 px-2 py-0.5 text-[11px] font-mono text-cyan-300 border border-cyan-800/60">
+                  op: {dbInfo.operation}
+                </span>
+              )}
+              {dbInfo.model && (
+                <span className="rounded bg-indigo-950/70 px-2 py-0.5 text-[11px] font-mono text-indigo-300 border border-indigo-800/60">
+                  model: {dbInfo.model}
+                </span>
+              )}
+              <span className="rounded bg-slate-950 px-2 py-0.5 text-[11px] font-mono text-slate-400 border border-slate-800">
+                system: {dbInfo.dbSystem}
+              </span>
+            </div>
+
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span className="font-semibold text-slate-300">
+                  {dbInfo.isRawSql ? 'Formatted SQL Statement (Redacted)' : 'Prisma ORM Method'}
+                </span>
+                {(dbInfo.formattedStatement || dbInfo.statement) && (
+                  <button
+                    onClick={() => copyToClipboard(dbInfo.formattedStatement || dbInfo.statement || '', 'sql')}
+                    className="flex items-center gap-1 text-slate-300 hover:text-white rounded bg-slate-900 px-2 py-0.5 border border-slate-800"
+                  >
+                    {copiedKey === 'sql' ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                    <span>Copy</span>
+                  </button>
+                )}
+              </div>
+              <pre className="max-h-56 overflow-x-auto rounded-lg bg-slate-950 p-3 text-[11px] font-mono text-slate-200 leading-relaxed border border-slate-800">
+                {dbInfo.formattedStatement || dbInfo.statement || dbInfo.displaySummary}
+              </pre>
+            </div>
+          </div>
+        )}
 
         {/* Root Cause & Exception Evidence Callout */}
         {isError && (

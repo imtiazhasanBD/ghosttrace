@@ -99,4 +99,28 @@ export class CheckoutController {
 
     return { status: 'unexpected_success' };
   }
+
+  @Post('slow')
+  async checkoutSlow(@Body() body: { email?: string; sku?: string }) {
+    const customerEmail = body.email || 'performance-tester@ghosttrace.io';
+    const sku = body.sku || 'PROD-SUCCESS-1';
+
+    this.logger.log(`Executing slow database transaction for ${customerEmail}`);
+
+    // Execute raw SQL query with pg_sleep to simulate unindexed / slow database query
+    await this.prisma.$queryRawUnsafe(
+      `SELECT id, sku, price, pg_sleep(0.12) FROM "DemoProduct" WHERE sku = '${sku}' LIMIT 1`
+    );
+
+    const product = await this.prisma.demoProduct.findUnique({
+      where: { sku },
+    });
+
+    return {
+      status: 'completed_slow_query',
+      productSku: sku,
+      productName: product?.name || 'Demo Product',
+      message: 'Simulated 120ms database bottleneck recorded for Slow Query Analyzer verification.',
+    };
+  }
 }

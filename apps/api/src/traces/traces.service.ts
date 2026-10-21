@@ -6,6 +6,10 @@ import {
   OverviewMetrics,
   TraceFilterParams,
   TraceComparisonResult,
+  SlowQueryParams,
+  SlowQueriesResponse,
+  SlowQuerySpan,
+  parseDatabaseSpanInfo,
 } from '@ghosttrace/shared-types';
 
 @Injectable()
@@ -262,4 +266,119 @@ export class TracesService {
       divergentSpans,
     };
   }
+
+  // Slow Query Analyzer: Filter database spans exceeding threshold with sorting and safe SQL/ORM info
+  async getSlowQueries(params: SlowQueryParams): Promise<SlowQueriesResponse> {
+    const {
+      projectId,
+      thresholdMs = 50,
+      serviceName,
+      operation,
+      model,
+      sortBy = 'duration_desc',
+      limit = 50,
+      offset = 0,
+    } = params;
+
+    const parsedThreshold = Number(thresholdMs) || 50;
+    const parsedLimit = limit && !isNaN(Number(limit)) ? Math.min(Number(limit), 100) : 50;
+    const parsedOffset = offset && !isNaN(Number(offset)) ? Number(offset) : 0;
+
+    const where: any = {
+      projectId,
+      durationMs: { gte: parsedThreshold },
+      OR: [
+        { name: { startsWith: 'prisma.' } },
+        { name: { startsWith: 'db.' } },
+        { name: { startsWith: 'SELECT' } },
+        { name: { startsWith: 'INSERT' } },
+        { name: { startsWith: 'UPDATE' } },
+        { name: { startsWith: 'DELETE' } },
+      ],
+    };
+
+    if (serviceName) {
+      where.trace = { serviceName };
+    }
+
+    if (model) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        name: { contains: model, mode: 'insensitive' },
+      });
+    }
+
+    if (operation) {
+      where.AND = where.AND || [];
+      where.AND.push({
+        name: { contains: operation, mode: 'insensitive' },
+      });
+    }
+
+    let orderBy: any = { durationMs: 'desc' };
+    if (sortBy === 'duration_asc') {
+      orderBy = { durationMs: 'asc' };
+    } else if (sortBy === 'recent') {
+      orderBy = { startTimeUnixNano: 'desc' };
+    }
+
+    const [total, records] = await Promise.all([
+      this.prisma.span.count({ where }),
+      this.prisma.span.findMany({
+        where,
+        include: {
+          trace: {
+            select: {
+              serviceName: true,
+              rootSpanName: true,
+            },
+          },
+        },
+        orderBy,
+        take: parsedLimit,
+        skip: parsedOffset,
+      }),
+    ]);
+
+    const queries: SlowQuerySpan[] = records.map((s) => {
+      const attrs = (s.attributes as Record<string, any>) || {};
+      const parsedInfo = parseDatabaseSpanInfo({
+        name: s.name,
+        attributes: attrs,
+        durationMs: s.durationMs,
+      });
+
+      return {
+        id: s.id,
+        traceId: s.traceId,
+        projectId: s.projectId,
+        name: s.name,
+        durationMs: Number(s.durationMs.toFixed(2)),
+        statusCode: s.statusCode as any,
+        statusMessage: s.statusMessage,
+        dbSystem: parsedInfo.dbSystem,
+        operation: parsedInfo.operation,
+        model: parsedInfo.model,
+        statement: parsedInfo.statement,
+        formattedStatement: parsedInfo.formattedStatement,
+        serviceName: s.trace?.serviceName || 'unknown',
+        createdAt: s.createdAt.toISOString(),
+        attributes: attrs,
+      };
+    });
+
+    const durations = records.map((r) => r.durationMs);
+    const avgSlowDurationMs =
+      durations.length > 0 ? Number((durations.reduce((a, b) => a + b, 0) / durations.length).toFixed(2)) : 0;
+    const maxDurationMs = durations.length > 0 ? Number(Math.max(...durations).toFixed(2)) : 0;
+
+    return {
+      queries,
+      total,
+      thresholdMs: parsedThreshold,
+      avgSlowDurationMs,
+      maxDurationMs,
+    };
+  }
 }
+

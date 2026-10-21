@@ -7,6 +7,7 @@ import { TracesModule } from './traces/traces.module';
 import { ErrorGroupsModule } from './error-groups/error-groups.module';
 import { ProjectsModule } from './projects/projects.module';
 import { WorkspacesModule } from './workspaces/workspaces.module';
+import { LiveTailModule } from './live-tail/live-tail.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { WorkspacesModule } from './workspaces/workspaces.module';
     ErrorGroupsModule,
     ProjectsModule,
     WorkspacesModule,
+    LiveTailModule,
   ],
 })
 export class AppModule {}

@@ -18,6 +18,8 @@ const BEARER_REGEX = /^Bearer\s+[A-Za-z0-9\-._~+/]+=*$/i;
 const JWT_REGEX = /^eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$/;
 const CREDIT_CARD_REGEX = /^(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})$/;
 
+import { redactSql } from '@ghosttrace/shared-types';
+
 export function redactValue(key: string, value: any): any {
   if (typeof value !== 'string') {
     return value;
@@ -28,6 +30,11 @@ export function redactValue(key: string, value: any): any {
     if (pattern.test(key)) {
       return '[REDACTED]';
     }
+  }
+
+  // SQL Statement redaction
+  if (key === 'db.statement' || key === 'sql') {
+    return redactSql(value);
   }
 
   // Value-based matching

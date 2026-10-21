@@ -8,6 +8,8 @@ import {
   TraceComparisonResult,
   WorkspaceDetail,
   WorkspaceMemberEntity,
+  SlowQueriesResponse,
+  SlowQuerySpan,
 } from '@ghosttrace/shared-types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -159,6 +161,34 @@ export async function fetchTraces(params: {
     cache: 'no-store',
   });
   if (!res.ok) throw new Error('Failed to fetch traces');
+  return res.json();
+}
+
+export async function fetchSlowQueries(params: {
+  projectId?: string;
+  thresholdMs?: number;
+  serviceName?: string;
+  operation?: string;
+  model?: string;
+  sortBy?: 'duration_desc' | 'duration_asc' | 'recent';
+  limit?: number;
+  offset?: number;
+}): Promise<SlowQueriesResponse> {
+  const url = new URL(`${API_BASE}/api/v1/traces/slow-queries`);
+  if (params.projectId) url.searchParams.set('projectId', params.projectId);
+  if (params.thresholdMs !== undefined) url.searchParams.set('thresholdMs', String(params.thresholdMs));
+  if (params.serviceName && params.serviceName !== 'ALL') url.searchParams.set('serviceName', params.serviceName);
+  if (params.operation && params.operation !== 'ALL') url.searchParams.set('operation', params.operation);
+  if (params.model && params.model !== 'ALL') url.searchParams.set('model', params.model);
+  if (params.sortBy) url.searchParams.set('sortBy', params.sortBy);
+  if (params.limit) url.searchParams.set('limit', String(params.limit));
+  if (params.offset) url.searchParams.set('offset', String(params.offset));
+
+  const res = await fetch(url.toString(), {
+    headers: getAuthHeaders(),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error('Failed to fetch slow queries');
   return res.json();
 }
 

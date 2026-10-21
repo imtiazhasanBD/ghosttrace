@@ -8,10 +8,14 @@ import {
   NotFoundException,
   UseGuards,
   Request,
+  Sse,
+  MessageEvent,
 } from '@nestjs/common';
+import { Observable } from 'rxjs';
 import { TracesService } from './traces.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { LiveTailService } from '../live-tail/live-tail.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('api/v1/traces')
@@ -19,6 +23,7 @@ export class TracesController {
   constructor(
     private readonly tracesService: TracesService,
     private readonly prisma: PrismaService,
+    private readonly liveTailService: LiveTailService,
   ) {}
 
   private async resolveDefaultProjectId(userId: string, projectId?: string): Promise<string> {
@@ -111,6 +116,40 @@ export class TracesController {
     }
     const resolvedProjectId = await this.resolveDefaultProjectId(req.user.id, projectId);
     return this.tracesService.compareTraces(baseId, targetId, resolvedProjectId);
+  }
+
+  @Get('slow-queries')
+  async getSlowQueries(
+    @Request() req: any,
+    @Query('projectId') projectId?: string,
+    @Query('thresholdMs') thresholdMs?: number,
+    @Query('serviceName') serviceName?: string,
+    @Query('operation') operation?: string,
+    @Query('model') model?: string,
+    @Query('sortBy') sortBy?: 'duration_desc' | 'duration_asc' | 'recent',
+    @Query('limit') limit?: number,
+    @Query('offset') offset?: number,
+  ) {
+    const resolvedProjectId = await this.resolveDefaultProjectId(req.user.id, projectId);
+    return this.tracesService.getSlowQueries({
+      projectId: resolvedProjectId,
+      thresholdMs,
+      serviceName,
+      operation,
+      model,
+      sortBy,
+      limit,
+      offset,
+    });
+  }
+
+  @Sse('live')
+  async liveTail(
+    @Request() req: any,
+    @Query('projectId') projectId?: string,
+  ): Promise<Observable<MessageEvent>> {
+    const resolvedProjectId = await this.resolveDefaultProjectId(req.user.id, projectId);
+    return this.liveTailService.getEventStream(resolvedProjectId);
   }
 
   @Get(':id')

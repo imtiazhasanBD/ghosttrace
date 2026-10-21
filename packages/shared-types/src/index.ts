@@ -180,3 +180,66 @@ export interface OTLPIngestResult {
   rejectedSpans: number;
   errors?: string[];
 }
+
+// Slow Query Analyzer Types
+export interface SlowQuerySpan {
+  id: string; // spanId
+  traceId: string;
+  projectId: string;
+  name: string;
+  durationMs: number;
+  statusCode: SpanStatusCode;
+  statusMessage?: string | null;
+  dbSystem: string;
+  operation?: string;
+  model?: string;
+  statement?: string | null;
+  formattedStatement?: string | null;
+  serviceName: string;
+  createdAt: string;
+  attributes: Record<string, any>;
+}
+
+export interface SlowQueryParams {
+  projectId: string;
+  thresholdMs?: number;
+  serviceName?: string;
+  operation?: string;
+  model?: string;
+  sortBy?: 'duration_desc' | 'duration_asc' | 'recent';
+  limit?: number;
+  offset?: number;
+}
+
+export interface SlowQueriesResponse {
+  queries: SlowQuerySpan[];
+  total: number;
+  thresholdMs: number;
+  avgSlowDurationMs: number;
+  maxDurationMs: number;
+}
+
+// SSE Live Tail Types
+export interface LiveTailEvent {
+  id: string;
+  type: 'trace' | 'error' | 'heartbeat';
+  projectId: string;
+  timestamp: string;
+  data: {
+    traceId: string;
+    spanId?: string;
+    serviceName: string;
+    name: string;
+    kind?: string;
+    durationMs?: number;
+    statusCode: SpanStatusCode;
+    statusMessage?: string | null;
+    errorType?: string;
+    dbOperation?: string;
+    dbModel?: string;
+    isSlow?: boolean;
+  };
+}
+
+export * from './sql-utils';
+

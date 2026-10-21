@@ -26,6 +26,7 @@ describe('IngestionService Unit Tests', () => {
         { key: 'user.password', value: { stringValue: 'plaintext-secret-password' } },
         { key: 'authorization', value: { stringValue: 'Bearer secret_jwt_token_here' } },
         { key: 'api_key', value: { stringValue: 'gt_live_secret123' } },
+        { key: 'db.statement', value: { stringValue: "SELECT * FROM users WHERE password = 'super_secret_value_123'" } },
       ];
 
       const parsed = (service as any).parseAttributes(rawAttrs);
@@ -34,6 +35,8 @@ describe('IngestionService Unit Tests', () => {
       expect(parsed['user.password']).toBe('[REDACTED]');
       expect(parsed['authorization']).toBe('[REDACTED]');
       expect(parsed['api_key']).toBe('[REDACTED]');
+      expect(parsed['db.statement']).toContain("password = '[REDACTED]'");
+      expect(parsed['db.statement']).not.toContain('super_secret_value_123');
     });
   });
 

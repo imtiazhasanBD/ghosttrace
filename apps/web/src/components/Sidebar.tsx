@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Database,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../lib/ProjectTelemetryContext';
 
@@ -37,6 +38,11 @@ export const Sidebar: React.FC = () => {
       label: 'Traces',
       href: `/projects/${currentProjectId}/traces`,
       icon: Layers,
+    },
+    {
+      label: 'Slow Queries',
+      href: `/projects/${currentProjectId}/database`,
+      icon: Database,
     },
     {
       label: 'Errors',

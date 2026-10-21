@@ -21,4 +21,11 @@ describe('SDK Redactor Tests', () => {
     const value = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e30.t-IDcSemACt8x4iTMCda8Yhe3iZaWbvV5XKSTbuAn0M';
     expect(redactValue('custom_header', value)).toBe('[REDACTED]');
   });
+
+  it('should redact sensitive values inside db.statement', () => {
+    const rawSql = "SELECT * FROM users WHERE password = 'my_secret_password' AND active = true";
+    const redacted = redactValue('db.statement', rawSql);
+    expect(redacted).toContain("password = '[REDACTED]'");
+    expect(redacted).not.toContain('my_secret_password');
+  });
 });

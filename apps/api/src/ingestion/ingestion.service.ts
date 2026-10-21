@@ -1,6 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as crypto from 'crypto';
+import { redactSql } from '@ghosttrace/shared-types';
+import { LiveTailService } from '../live-tail/live-tail.service';
 
 const SENSITIVE_KEY_PATTERNS = [
   /password/i,
@@ -19,7 +21,10 @@ const SENSITIVE_KEY_PATTERNS = [
 export class IngestionService {
   private readonly logger = new Logger(IngestionService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly liveTailService?: LiveTailService,
+  ) {}
 
   // Parse OTLP AnyValue object to JavaScript primitive
   private parseAnyValue(val: any): any {
@@ -56,7 +61,12 @@ export class IngestionService {
       if (isSensitive) {
         result[key] = '[REDACTED]';
       } else {
-        result[key] = this.parseAnyValue(item.value);
+        const val = this.parseAnyValue(item.value);
+        if ((key === 'db.statement' || key === 'sql') && typeof val === 'string') {
+          result[key] = redactSql(val);
+        } else {
+          result[key] = val;
+        }
       }
     }
     return result;
@@ -315,5 +325,31 @@ export class IngestionService {
         errorGroupHash,
       },
     });
+
+    // 3. Publish to Live Tail stream only after successful persistence
+    if (this.liveTailService) {
+      const isSlow =
+        durationMs >= 50 &&
+        (attributes['db.system'] || name.startsWith('prisma.') || name.startsWith('db.'));
+
+      this.liveTailService.publishEvent({
+        type: isError ? 'error' : 'trace',
+        projectId,
+        data: {
+          traceId,
+          spanId,
+          serviceName,
+          name,
+          kind,
+          durationMs: Number(durationMs.toFixed(2)),
+          statusCode: status.code,
+          statusMessage: status.message || null,
+          errorType: exceptionDetails ? (exceptionDetails as any).type : undefined,
+          dbOperation: attributes['db.operation'],
+          dbModel: attributes['db.sql.table'],
+          isSlow,
+        },
+      });
+    }
   }
 }
