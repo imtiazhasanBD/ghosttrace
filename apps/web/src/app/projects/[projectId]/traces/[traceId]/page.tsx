@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
-import { TraceEntity, SpanEntity } from '@ghosttrace/shared-types';
-import { fetchTraceDetails } from '../../../../../lib/api';
+import { SpanEntity } from '@ghosttrace/shared-types';
+import { useTraceDetailQuery } from '../../../../../lib/hooks/useTelemetryQueries';
 import { TraceWaterfall } from '../../../../../components/TraceWaterfall';
 import { SpanDetailDrawer } from '../../../../../components/SpanDetailDrawer';
 import { Button } from '../../../../../components/ui/Button';
@@ -16,27 +16,21 @@ export default function TraceDetailPage({
   params: { projectId: string; traceId: string };
 }) {
   const router = useRouter();
-  const [trace, setTrace] = useState<TraceEntity | null>(null);
   const [selectedSpan, setSelectedSpan] = useState<SpanEntity | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+
+  // Milestone B: TanStack Query for Trace Details
+  const {
+    data: trace,
+    isLoading,
+    isError,
+    error: queryError,
+  } = useTraceDetailQuery(params.traceId);
 
   useEffect(() => {
-    setIsLoading(true);
-    setError(null);
-    fetchTraceDetails(params.traceId)
-      .then((t) => {
-        setTrace(t);
-        if (t.spans && t.spans.length > 0) {
-          setSelectedSpan(t.spans[0]);
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load trace details:', err);
-        setError('Trace not found or failed to load.');
-      })
-      .finally(() => setIsLoading(false));
-  }, [params.traceId]);
+    if (trace?.spans && trace.spans.length > 0 && !selectedSpan) {
+      setSelectedSpan(trace.spans[0]);
+    }
+  }, [trace, selectedSpan]);
 
   if (isLoading) {
     return (
@@ -47,16 +41,16 @@ export default function TraceDetailPage({
     );
   }
 
-  if (error || !trace) {
+  if (isError || !trace) {
     return (
       <Card className="max-w-lg mx-auto text-center p-8 mt-12 space-y-4">
-        <div className="inline-flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive border border-destructive/20 mx-auto">
+        <div className="inline-flex h-12 w-12 items-center justify-center rounded-md bg-destructive/10 text-destructive border border-destructive/20 mx-auto">
           <AlertCircle className="h-6 w-6" />
         </div>
         <div>
           <h3 className="text-base font-bold text-foreground">Trace Not Found</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            {error || 'The requested trace ID was not found in the telemetry collector.'}
+            {queryError?.message || 'The requested trace ID was not found in the telemetry collector.'}
           </p>
         </div>
         <Button

@@ -19,7 +19,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../../../../lib/ProjectTelemetryContext';
-import { fetchSlowQueries } from '../../../../lib/api';
+import { useSlowQueriesQuery } from '../../../../lib/hooks/useTelemetryQueries';
 import { SlowQuerySpan, SlowQueriesResponse } from '@ghosttrace/shared-types';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../../components/ui/Card';
 import { Badge } from '../../../../components/ui/Badge';
@@ -28,7 +28,7 @@ import { cn } from '../../../../lib/utils';
 
 export default function SlowQueryAnalyzerPage() {
   const params = useParams();
-  const { currentProjectId, metrics } = useProjectTelemetry();
+  const { currentProjectId, metrics, isAutoRefresh, refreshInterval } = useProjectTelemetry();
   const effectiveProjectId = (params?.projectId as string) || currentProjectId;
 
   // Filter and threshold state
@@ -38,19 +38,14 @@ export default function SlowQueryAnalyzerPage() {
   const [modelFilter, setModelFilter] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'duration_desc' | 'duration_asc' | 'recent'>('duration_desc');
   const [searchQuery, setSearchQuery] = useState<string>('');
-
-  // Data state
-  const [data, setData] = useState<SlowQueriesResponse | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedSpanId, setCopiedSpanId] = useState<string | null>(null);
   const [expandedSpanId, setExpandedSpanId] = useState<string | null>(null);
 
   const thresholdPresets = [25, 50, 100, 250, 500];
 
-  const loadData = () => {
-    if (!effectiveProjectId) return;
-    setIsLoading(true);
-    fetchSlowQueries({
+  // Milestone C: TanStack Query for Slow Database Queries
+  const queryParams = useMemo(
+    () => ({
       projectId: effectiveProjectId,
       thresholdMs,
       serviceName: serviceFilter !== 'ALL' ? serviceFilter : undefined,
@@ -58,21 +53,18 @@ export default function SlowQueryAnalyzerPage() {
       model: modelFilter !== 'ALL' ? modelFilter : undefined,
       sortBy,
       limit: 50,
-    })
-      .then((res) => {
-        setData(res);
-      })
-      .catch((err) => {
-        console.error('Failed to load slow queries:', err);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
-  };
+    }),
+    [effectiveProjectId, thresholdMs, serviceFilter, operationFilter, modelFilter, sortBy]
+  );
 
-  useEffect(() => {
-    loadData();
-  }, [effectiveProjectId, thresholdMs, serviceFilter, operationFilter, modelFilter, sortBy]);
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    refetch: loadData,
+  } = useSlowQueriesQuery(queryParams, {
+    refetchInterval: isAutoRefresh ? refreshInterval : false,
+  });
 
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
@@ -137,7 +129,9 @@ export default function SlowQueryAnalyzerPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadData}
+            onClick={() => {
+              loadData();
+            }}
             disabled={isLoading}
             className="text-xs"
           >

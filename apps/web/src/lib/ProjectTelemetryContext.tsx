@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   ProjectSummary,
   OverviewMetrics,
@@ -82,6 +83,7 @@ export const ProjectTelemetryProvider: React.FC<{
 }> = ({ projectId, children }) => {
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
 
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
   const [isAuthRequired, setIsAuthRequired] = useState<boolean>(false);
@@ -267,6 +269,10 @@ export const ProjectTelemetryProvider: React.FC<{
       });
       setTimeout(() => {
         refreshData();
+        queryClient.invalidateQueries({ queryKey: ['overview'] });
+        queryClient.invalidateQueries({ queryKey: ['traces'] });
+        queryClient.invalidateQueries({ queryKey: ['error-groups'] });
+        queryClient.invalidateQueries({ queryKey: ['slow-queries'] });
         setIsSimulating(false);
       }, 700);
     } catch (err) {
@@ -291,6 +297,10 @@ export const ProjectTelemetryProvider: React.FC<{
     } finally {
       setTimeout(() => {
         refreshData();
+        queryClient.invalidateQueries({ queryKey: ['overview'] });
+        queryClient.invalidateQueries({ queryKey: ['traces'] });
+        queryClient.invalidateQueries({ queryKey: ['error-groups'] });
+        queryClient.invalidateQueries({ queryKey: ['slow-queries'] });
         setIsSimulating(false);
       }, 700);
     }

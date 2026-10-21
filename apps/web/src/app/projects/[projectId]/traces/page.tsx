@@ -17,7 +17,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useProjectTelemetry } from '../../../../lib/ProjectTelemetryContext';
-import { fetchTraces } from '../../../../lib/api';
+import { useTracesQuery } from '../../../../lib/hooks/useTelemetryQueries';
 import { TraceEntity } from '@ghosttrace/shared-types';
 import { LiveTailConsole } from '../../../../components/LiveTailConsole';
 import { Card, CardHeader, CardTitle, CardContent } from '../../../../components/ui/Card';
@@ -29,7 +29,7 @@ import { cn } from '../../../../lib/utils';
 export default function TracesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { currentProjectId, metrics } = useProjectTelemetry();
+  const { currentProjectId, metrics, isAutoRefresh, refreshInterval } = useProjectTelemetry();
 
   // Initialize filters from URL query parameters if present
   const initialService = searchParams.get('service') || 'ALL';
@@ -43,10 +43,6 @@ export default function TracesPage() {
   const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [durationFilter, setDurationFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>(initialSearch);
-
-  const [traces, setTraces] = useState<TraceEntity[]>([]);
-  const [total, setTotal] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [copiedTraceId, setCopiedTraceId] = useState<string | null>(null);
 
   const copyToClipboard = (id: string, e: React.MouseEvent) => {
@@ -63,25 +59,31 @@ export default function TracesPage() {
     return {};
   }, [durationFilter]);
 
-  useEffect(() => {
-    if (!currentProjectId) return;
-    setIsLoading(true);
-    fetchTraces({
+  // Milestone B: TanStack Query for Trace Explorer
+  const queryParams = useMemo(
+    () => ({
       projectId: currentProjectId,
       serviceName: serviceFilter !== 'ALL' ? serviceFilter : undefined,
-      statusCode: statusFilter,
+      statusCode: statusFilter !== 'ALL' ? statusFilter : undefined,
       search: searchQuery.trim() || undefined,
       minDurationMs: durationBounds.minDurationMs,
       maxDurationMs: durationBounds.maxDurationMs,
       limit: 50,
-    })
-      .then((res) => {
-        setTraces(res.traces);
-        setTotal(res.total);
-      })
-      .catch((err) => console.error('Failed to load traces:', err))
-      .finally(() => setIsLoading(false));
-  }, [currentProjectId, serviceFilter, statusFilter, searchQuery, durationBounds]);
+    }),
+    [currentProjectId, serviceFilter, statusFilter, searchQuery, durationBounds]
+  );
+
+  const {
+    data: tracesData,
+    isLoading,
+    isRefetching,
+    refetch: refetchTraces,
+  } = useTracesQuery(queryParams, {
+    refetchInterval: isAutoRefresh ? refreshInterval : false,
+  });
+
+  const traces = tracesData?.traces ?? [];
+  const total = tracesData?.total ?? 0;
 
   const parseOperation = (name: string) => {
     const parts = name.split(' ');
